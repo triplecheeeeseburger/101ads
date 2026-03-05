@@ -929,7 +929,12 @@ function catStyle(cat) {
 }
 
 // ── FETCH ────────────────────────────────────────────────
-async function fetchBillboards() {
+// Track the most recent captured_at timestamp we have
+let lastFetchedAt = null;
+let initialLoadDone = false;
+
+// Full load — fetches all billboards, used once on startup
+async function initialFetch() {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/billboards?order=captured_at.desc&limit=500`,
@@ -938,16 +943,66 @@ async function fetchBillboards() {
     const data = await res.json();
     if (!Array.isArray(data)) throw new Error();
     allBillboards = data;
+    // Track the newest timestamp so incremental sync knows where to start
+    if (data.length > 0) {
+      lastFetchedAt = data.reduce((max, b) =>
+        b.captured_at > max ? b.captured_at : max, data[0].captured_at);
+    }
+    initialLoadDone = true;
     buildPills();
     applyFilters();
     updateStats();
-    const txt = `${data.length} billboard${data.length !== 1 ? 's' : ''}`;
-    document.getElementById('mapBadge').textContent = txt;
-    document.getElementById('sheetCount').textContent = txt;
+    updateBadge();
   } catch(e) {
     document.getElementById('galleryList').innerHTML = `<div class="empty-state">Could not load data.</div>`;
     document.getElementById('sheetList').innerHTML = `<div class="empty-state">Could not load data.</div>`;
     document.getElementById('mapBadge').textContent = 'Error';
+  }
+}
+
+// Incremental sync — only fetches rows newer than lastFetchedAt
+// Tiny payload (~1-2KB) vs full dataset fetch
+async function syncNewBillboards() {
+  if (!initialLoadDone) return;
+  try {
+    // Use gt (greater than) filter on captured_at
+    const since = lastFetchedAt
+      ? `&captured_at=gt.${encodeURIComponent(lastFetchedAt)}`
+      : '';
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/billboards?order=captured_at.desc&limit=50${since}`,
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+    );
+    const newRows = await res.json();
+    if (!Array.isArray(newRows) || newRows.length === 0) return;
+
+    // Merge new rows, dedupe by id, keep sorted newest-first
+    const existingIds = new Set(allBillboards.map(b => b.id));
+    const truly_new = newRows.filter(b => !existingIds.has(b.id));
+    if (truly_new.length === 0) return;
+
+    allBillboards = [...truly_new, ...allBillboards];
+
+    // Update the high-water mark
+    lastFetchedAt = newRows.reduce((max, b) =>
+      b.captured_at > max ? b.captured_at : max, lastFetchedAt || newRows[0].captured_at);
+
+    buildPills();
+    applyFilters();
+    updateStats();
+    updateBadge();
+
+    console.log(`Synced ${truly_new.length} new billboard(s)`);
+  } catch(e) {
+    console.warn('Incremental sync failed:', e);
+  }
+}
+
+function updateBadge() {
+  const txt = `${allBillboards.length} billboard${allBillboards.length !== 1 ? 's' : ''}`;
+  document.getElementById('mapBadge').textContent = txt;
+  if (document.getElementById('sheetCount')) {
+    document.getElementById('sheetCount').textContent = txt;
   }
 }
 
@@ -1322,8 +1377,9 @@ function formatDate(iso, full=false) {
 }
 
 // ── INIT ─────────────────────────────────────────────────
-fetchBillboards();
-setInterval(fetchBillboards, 60000);
+// Initial full load, then incremental sync every 30s
+initialFetch();
+setInterval(syncNewBillboards, 30000);
 
 // Invalidate map size on resize (mobile sheet resize)
 window.addEventListener('resize', () => leafMap.invalidateSize());
