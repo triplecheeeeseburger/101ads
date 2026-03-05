@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>101 Ads — Highway 101 Billboard Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface2: #f5f5f7;
+    --border: #e0e0e5;
+    --border-light: #f0f0f2;
+    --text: #1d1d1f;
+    --text2: #6e6e73;
+    --text3: #aeaeb2;
+    --accent: #0071e3;
+    --accent-hover: #0077ed;
+    --red: #ff3b30;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    --sheet-shadow: 0 -4px 32px rgba(0,0,0,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── DESKTOP LAYOUT ──────────────────────────────────── */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 52px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+    z-index: 200;
+    gap: 16px;
+  }
+
+  .logo {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .logo-sub {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text3);
+    letter-spacing: 0;
+  }
+
+  /* FILTER PILLS */
+  .filter-pills {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: none;
+    position: relative;
+  }
+
+  .filter-pills::-webkit-scrollbar { display: none; }
+
+  .pill {
+    padding: 5px 13px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text2);
+    transition: all 0.15s ease;
+    background: var(--bg);
+    white-space: nowrap;
+    letter-spacing: -0.1px;
+  }
+
+  .pill:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,113,227,0.04); }
+  .pill.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+  .pill-more { position: relative; }
+
+  .more-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    z-index: 9999;
+    min-width: 200px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+
+  .more-dropdown.open { display: block; }
+
+  .more-dropdown button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: background 0.1s;
+    gap: 12px;
+  }
+
+  .more-dropdown button:hover { background: var(--surface2); }
+  .more-dropdown button.active { color: var(--accent); font-weight: 500; }
+
+  .more-dropdown .cat-count {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 400;
+  }
+
+  /* HEADER STATS */
+  .header-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .stat {
+    text-align: right;
+  }
+
+  .stat-num {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* MAIN */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* MAP */
+  .map-panel {
+    flex: 1;
+    position: relative;
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+  }
+
+  .map-badge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 500;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-light);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text2);
+    box-shadow: var(--card-shadow);
+  }
+
+  /* GALLERY PANEL (desktop) */
+  .gallery-panel {
+    width: 360px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--border-light);
+    background: var(--surface2);
+    overflow: hidden;
+  }
+
+  .gallery-header {
+    padding: 14px 16px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+  }
+
+  .gallery-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+
+  .search-box {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .search-box:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,113,227,0.12);
+  }
+
+  .search-box::placeholder { color: var(--text3); }
+
+  .gallery-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  /* BILLBOARD CARD */
+  .billboard-card {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+  }
+
+  .billboard-card:hover {
+    border-color: var(--border);
+    box-shadow: var(--card-shadow);
+  }
+
+  .billboard-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,113,227,0.1);
+  }
+
+  .card-img {
+    width: 76px;
+    height: 54px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text3);
+    font-size: 20px;
+    overflow: hidden;
+    position: relative;
+    cursor: zoom-in;
+  }
+
+  .card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+  }
+
+  .card-img .zoom-hint {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.15s;
+    border-radius: 6px;
+  }
+
+  .card-img:hover .zoom-hint { opacity: 1; }
+
+  .card-body { flex: 1; min-width: 0; }
+
+  .card-category {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+  }
+
+  .card-ocr {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 400;
+    letter-spacing: -0.1px;
+  }
+
+  .card-meta {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+    font-weight: 400;
+  }
+
+  /* EXPANDED CARD (mobile in-place expand) */
+  .billboard-card.expanded .card-img {
+    display: none;
+  }
+
+  .card-expanded-content {
+    display: none;
+  }
+
+  .billboard-card.expanded .card-expanded-content {
+    display: block;
+    margin-top: 10px;
+  }
+
+  .expanded-img {
+    width: 100%;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 10px;
+    cursor: zoom-in;
+    max-height: 180px;
+  }
+
+  .expanded-ocr {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    margin-bottom: 8px;
+    font-weight: 400;
+  }
+
+  .expanded-meta {
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.8;
+  }
+
+  /* LOADING / EMPTY */
+  .loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 180px;
+    color: var(--text3);
+    font-size: 13px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .spinner {
+    width: 22px; height: 22px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  /* DETAIL PANEL (desktop — slides up in map) */
+  .detail-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border-light);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 20px;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+    z-index: 400;
+    max-height: 50%;
+    overflow-y: auto;
+    box-shadow: var(--sheet-shadow);
+  }
+
+  .detail-panel.open { transform: translateY(0); }
+
+  .detail-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: var(--surface2);
+    border: none;
+    border-radius: 50%;
+    color: var(--text2);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .detail-close:hover { background: var(--border); }
+
+  .detail-img-wrap {
+    position: relative;
+    margin-bottom: 14px;
+    cursor: zoom-in;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .detail-img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .detail-category {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 5px;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+
+  .detail-ocr {
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: -0.2px;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  .detail-coords {
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 2;
+    font-weight: 400;
+  }
+
+  /* LIGHTBOX */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+  }
+
+  .lightbox.open { display: flex; }
+
+  .lightbox img {
+    max-width: 92vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: var(--radius);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .lightbox-close {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9001;
+    transition: background 0.15s;
+  }
+
+  .lightbox-close:hover { background: rgba(255,255,255,0.25); }
+
+  /* Leaflet overrides for light theme */
+  .leaflet-container { background: #e8e8ed; }
+  .leaflet-control-zoom a {
+    border-radius: 8px !important;
+    font-size: 16px;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+
+  /* ── MOBILE ──────────────────────────────────────────── */
+  @media (max-width: 768px) {
+
+    header {
+      padding: 0 16px;
+      height: 48px;
+    }
+
+    .logo-sub, .header-stats { display: none; }
+
+    .filter-pills {
+      overflow-x: auto;
+      flex: 1;
+    }
+
+    /* Map takes full screen */
+    .main {
+      flex-direction: column;
+      position: relative;
+    }
+
+    .map-panel {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+    }
+
+    /* Hide desktop gallery */
+    .gallery-panel {
+      display: none;
+    }
+
+    /* ── BOTTOM SHEET ── */
+    .mobile-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 600;
+      background: var(--surface);
+      border-radius: 16px 16px 0 0;
+      box-shadow: var(--sheet-shadow);
+      display: flex;
+      flex-direction: column;
+      /* Default: 33% height */
+      height: 36vh;
+      min-height: 120px;
+      transition: height 0.35s cubic-bezier(0.32,0.72,0,1);
+      touch-action: none;
+      will-change: height;
+    }
+
+    .mobile-sheet.expanded {
+      height: 88vh;
+    }
+
+    .mobile-sheet.collapsed {
+      height: 72px;
+    }
+
+    /* Drag handle */
+    .sheet-handle {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 16px 8px;
+      cursor: grab;
+      user-select: none;
+      gap: 8px;
+    }
+
+    .sheet-handle:active { cursor: grabbing; }
+
+    .handle-bar {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .sheet-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .sheet-count {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+
+    .sheet-search {
+      width: 100%;
+      margin: 0 16px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+      display: none;
+    }
+
+    .mobile-sheet.expanded .sheet-search {
+      display: block;
+    }
+
+    .sheet-search:focus { border-color: var(--accent); }
+    .sheet-search::placeholder { color: var(--text3); }
+
+    /* Sheet list */
+    .sheet-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 10px 10px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .sheet-list::-webkit-scrollbar { display: none; }
+
+    /* Mobile card — horizontal compact */
+    .mobile-card {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    .mobile-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0,113,227,0.1);
+    }
+
+    .mobile-card-header {
+      display: flex;
+      gap: 10px;
+      padding: 10px 12px;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .mobile-card-img {
+      width: 56px;
+      height: 42px;
+      border-radius: 6px;
+      background: var(--surface2);
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text3);
+      font-size: 16px;
+    }
+
+    .mobile-card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+    }
+
+    .mobile-card-body { flex: 1; min-width: 0; }
+
+    .mobile-card-ocr {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: -0.1px;
+      margin-bottom: 3px;
+    }
+
+    .mobile-card-meta {
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    /* Expanded card body */
+    .mobile-card-expanded {
+      display: none;
+      padding: 0 12px 12px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .mobile-card.expanded .mobile-card-expanded {
+      display: block;
+    }
+
+    .mobile-expanded-img {
+      width: 100%;
+      border-radius: 8px;
+      object-fit: cover;
+      display: block;
+      margin: 10px 0 10px;
+      max-height: 200px;
+      cursor: zoom-in;
+    }
+
+    .mobile-expanded-ocr {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--text);
+      margin-bottom: 8px;
+      font-weight: 400;
+    }
+
+    .mobile-expanded-meta {
+      font-size: 11px;
+      color: var(--text3);
+      line-height: 2;
+    }
+
+    /* Hide desktop detail panel on mobile */
+    .detail-panel { display: none; }
+    .map-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      101 Ads
+      <span class="logo-sub">Highway 101 · Bay Area</span>
+    </div>
+    <div class="filter-pills" id="filterPills">
+      <button class="pill active" data-cat="all">All</button>
+    </div>
+    <div class="header-stats">
+      <div class="stat">
+        <div class="stat-num" id="totalCount">—</div>
+        <div class="stat-label">Captured</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="categoryCount">—</div>
+        <div class="stat-label">Categories</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- MAP -->
+    <div class="map-panel">
+      <div id="map"></div>
+      <div class="map-badge" id="mapBadge">Loading…</div>
+      <!-- Desktop detail panel -->
+      <div class="detail-panel" id="detailPanel">
+        <button class="detail-close" id="detailClose">✕</button>
+        <div id="detailContent"></div>
+      </div>
+    </div>
+
+    <!-- DESKTOP GALLERY -->
+    <div class="gallery-panel">
+      <div class="gallery-header">
+        <div class="gallery-title">Captures</div>
+        <input class="search-box" type="text" placeholder="Search billboard text…" id="searchBox">
+      </div>
+      <div class="gallery-list" id="galleryList">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          Loading billboards…
+        </div>
+      </div>
+    </div>
+
+    <!-- MOBILE BOTTOM SHEET -->
+    <div class="mobile-sheet" id="mobileSheet">
+      <div class="sheet-handle" id="sheetHandle">
+        <div class="handle-bar"></div>
+        <div class="sheet-meta-row">
+          <span class="sheet-count" id="sheetCount">Loading…</span>
+        </div>
+      </div>
+      <input class="sheet-search" type="text" placeholder="Search billboard text…" id="mobileSearchBox">
+      <div class="sheet-list" id="sheetList">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          Loading…
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose">✕</button>
+  <img id="lightboxImg" src="" alt="billboard">
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ewjnpoziinaprmkxjnhu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9TACfIEqKqnNETuV_P0YZw_uohUpV9c';
+const MAX_PILLS = 5;
+const PALETTE = [
+  '#0071e3','#34c759','#ff9500','#ff3b30',
+  '#af52de','#5ac8fa','#ffcc00','#ff2d55',
+  '#30b0c7','#32ade6','#64d2ff','#30d158'
+];
+
+let allBillboards = [], filtered = [];
+let selectedId = null, activeFilter = 'all', searchQuery = '';
+let markerLayer = {}, catColorMap = {};
+const isMobile = () => window.innerWidth <= 768;
+
+// ── MAP ──────────────────────────────────────────────────
+const leafMap = L.map('map', { center: [37.55, -122.05], zoom: 11, zoomControl: false });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap, © CARTO', maxZoom: 19
+}).addTo(leafMap);
+L.control.zoom({ position: 'bottomright' }).addTo(leafMap);
+
+// ── COLORS ───────────────────────────────────────────────
+function assignColors(cats) {
+  catColorMap = {};
+  cats.forEach((c, i) => catColorMap[c] = PALETTE[i % PALETTE.length]);
+}
+function catColor(cat) { return catColorMap[cat] || '#8e8e93'; }
+function catStyle(cat) {
+  const c = catColor(cat);
+  return `background:${c}18;color:${c};`;
+}
+
+// ── FETCH ────────────────────────────────────────────────
+async function fetchBillboards() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/billboards?order=captured_at.desc&limit=500`,
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+    );
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error();
+    allBillboards = data;
+    buildPills();
+    applyFilters();
+    updateStats();
+    const txt = `${data.length} billboard${data.length !== 1 ? 's' : ''}`;
+    document.getElementById('mapBadge').textContent = txt;
+    document.getElementById('sheetCount').textContent = txt;
+  } catch(e) {
+    document.getElementById('galleryList').innerHTML = `<div class="empty-state">Could not load data.</div>`;
+    document.getElementById('sheetList').innerHTML = `<div class="empty-state">Could not load data.</div>`;
+    document.getElementById('mapBadge').textContent = 'Error';
+  }
+}
+
+// ── PILLS ────────────────────────────────────────────────
+function buildPills() {
+  const freq = {};
+  allBillboards.forEach(b => {
+    const c = (b.category || 'Uncategorized').trim();
+    freq[c] = (freq[c] || 0) + 1;
+  });
+  const sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]).map(([c])=>c);
+  assignColors(sorted);
+  const top = sorted.slice(0, MAX_PILLS);
+  const rest = sorted.slice(MAX_PILLS);
+  const container = document.getElementById('filterPills');
+  container.innerHTML = '';
+
+  const allBtn = document.createElement('button');
+  allBtn.className = 'pill' + (activeFilter==='all'?' active':'');
+  allBtn.dataset.cat = 'all';
+  allBtn.textContent = 'All';
+  allBtn.onclick = () => setFilter('all');
+  container.appendChild(allBtn);
+
+  top.forEach(cat => {
+    const btn = document.createElement('button');
+    const isActive = activeFilter === cat;
+    btn.className = 'pill' + (isActive?' active':'');
+    btn.textContent = cat;
+    if (isActive) btn.style.cssText = `background:${catColor(cat)};border-color:${catColor(cat)};color:#fff;`;
+    btn.onclick = () => setFilter(cat);
+    container.appendChild(btn);
+  });
+
+  if (rest.length > 0) {
+    const wrap = document.createElement('div');
+    wrap.className = 'pill-more';
+    const inRest = rest.includes(activeFilter);
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'pill' + (inRest?' active':'');
+    moreBtn.textContent = inRest ? activeFilter : `More (${rest.length})`;
+    const dd = document.createElement('div');
+    dd.className = 'more-dropdown';
+    rest.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = activeFilter===cat?'active':'';
+      btn.innerHTML = `<span>${cat}</span><span class="cat-count">${freq[cat]}</span>`;
+      btn.onclick = e => { e.stopPropagation(); setFilter(cat); dd.classList.remove('open'); };
+      dd.appendChild(btn);
+    });
+    moreBtn.onclick = e => { e.stopPropagation(); dd.classList.toggle('open'); };
+    wrap.appendChild(moreBtn);
+    wrap.appendChild(dd);
+    container.appendChild(wrap);
+  }
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.more-dropdown').forEach(d => d.classList.remove('open'));
+});
+
+// ── FILTER ───────────────────────────────────────────────
+function setFilter(cat) {
+  activeFilter = cat;
+  selectedId = null;
+  document.getElementById('detailPanel').classList.remove('open');
+  buildPills();
+  applyFilters();
+}
+
+function applyFilters() {
+  filtered = allBillboards.filter(b => {
+    const matchCat = activeFilter==='all' || (b.category||'').trim()===activeFilter;
+    const matchSearch = !searchQuery ||
+      (b.ocr_text||'').toLowerCase().includes(searchQuery) ||
+      (b.address||'').toLowerCase().includes(searchQuery);
+    return matchCat && matchSearch;
+  });
+  renderGallery();
+  renderMobileSheet();
+  renderMarkers();
+}
+
+// ── DESKTOP GALLERY ──────────────────────────────────────
+function renderGallery() {
+  const list = document.getElementById('galleryList');
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state">No billboards match.</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  filtered.forEach(b => {
+    const card = document.createElement('div');
+    card.className = 'billboard-card' + (b.id===selectedId?' selected':'');
+    card.dataset.id = b.id;
+
+    const imgDiv = document.createElement('div');
+    imgDiv.className = 'card-img';
+    if (b.image_url) {
+      const img = document.createElement('img');
+      img.src = b.image_url; img.alt = ''; img.loading = 'lazy';
+      imgDiv.appendChild(img);
+      const hint = document.createElement('div');
+      hint.className = 'zoom-hint'; hint.textContent = '⤢';
+      imgDiv.appendChild(hint);
+      imgDiv.addEventListener('click', e => { e.stopPropagation(); openLightbox(b.image_url); });
+    } else {
+      imgDiv.textContent = '🖼';
+    }
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    body.innerHTML = `
+      <span class="card-category" style="${catStyle(b.category)}">${b.category||'Uncategorized'}</span>
+      <div class="card-ocr">${b.ocr_text||'(no text detected)'}</div>
+      <div class="card-meta">${b.address?b.address.split(',')[0]:`${(b.latitude||0).toFixed(4)}, ${(b.longitude||0).toFixed(4)}`} · ${formatDate(b.captured_at)}</div>`;
+
+    card.appendChild(imgDiv);
+    card.appendChild(body);
+    card.addEventListener('click', () => selectBillboard(b.id));
+    list.appendChild(card);
+  });
+}
+
+// ── MOBILE SHEET ─────────────────────────────────────────
+function renderMobileSheet() {
+  const list = document.getElementById('sheetList');
+  const count = document.getElementById('sheetCount');
+  count.textContent = `${filtered.length} billboard${filtered.length!==1?'s':''}`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state">No billboards match.</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  filtered.forEach(b => {
+    const card = document.createElement('div');
+    card.className = 'mobile-card' + (b.id===selectedId?' selected':'') + (b.id===selectedId?' expanded':'');
+    card.dataset.id = b.id;
+
+    // Header row (always visible)
+    const header = document.createElement('div');
+    header.className = 'mobile-card-header';
+
+    const imgDiv = document.createElement('div');
+    imgDiv.className = 'mobile-card-img';
+    if (b.image_url) {
+      const img = document.createElement('img');
+      img.src = b.image_url; img.alt = ''; img.loading = 'lazy';
+      imgDiv.appendChild(img);
+    } else {
+      imgDiv.textContent = '🖼';
+    }
+
+    const cardBody = document.createElement('div');
+    cardBody.className = 'mobile-card-body';
+    cardBody.innerHTML = `
+      <div class="mobile-card-ocr">${b.ocr_text||'(no text detected)'}</div>
+      <div class="mobile-card-meta"><span style="${catStyle(b.category)};padding:1px 5px;border-radius:3px;font-size:10px;font-weight:600;">${b.category||'?'}</span> · ${formatDate(b.captured_at)}</div>`;
+
+    header.appendChild(imgDiv);
+    header.appendChild(cardBody);
+
+    // Expanded content
+    const expanded = document.createElement('div');
+    expanded.className = 'mobile-card-expanded';
+    if (b.image_url) {
+      const img = document.createElement('img');
+      img.className = 'mobile-expanded-img';
+      img.src = b.image_url; img.alt = '';
+      img.addEventListener('click', () => openLightbox(b.image_url));
+      expanded.appendChild(img);
+    }
+    expanded.innerHTML += `
+      <div class="mobile-expanded-ocr">${b.ocr_text||'(no text detected)'}</div>
+      <div class="mobile-expanded-meta">
+        📍 ${b.address||'Unknown location'}<br>
+        ${(b.latitude||0).toFixed(6)}, ${(b.longitude||0).toFixed(6)}<br>
+        🕐 ${formatDate(b.captured_at, true)}
+      </div>`;
+
+    card.appendChild(header);
+    card.appendChild(expanded);
+
+    header.addEventListener('click', () => selectBillboard(b.id));
+    list.appendChild(card);
+  });
+}
+
+// ── MARKERS ──────────────────────────────────────────────
+function renderMarkers() {
+  Object.values(markerLayer).forEach(m => leafMap.removeLayer(m));
+  markerLayer = {};
+  filtered.forEach(b => {
+    if (!b.latitude || !b.longitude) return;
+    const color = catColor(b.category);
+    const sel = b.id === selectedId;
+    const size = sel ? 16 : 10;
+    const icon = L.divIcon({
+      html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);${sel?`box-shadow:0 0 0 4px ${color}33,0 1px 4px rgba(0,0,0,0.25);`:''}"></div>`,
+      className: '', iconSize: [size,size], iconAnchor: [size/2,size/2]
+    });
+    markerLayer[b.id] = L.marker([b.latitude, b.longitude], { icon })
+      .addTo(leafMap)
+      .on('click', () => selectBillboard(b.id));
+  });
+  if (filtered.length > 0 && !selectedId) {
+    const coords = filtered.filter(b=>b.latitude&&b.longitude).map(b=>[b.latitude,b.longitude]);
+    if (coords.length) leafMap.fitBounds(coords, { padding: [40,40] });
+  }
+}
+
+// ── SELECT ───────────────────────────────────────────────
+function selectBillboard(id) {
+  const prev = selectedId;
+  selectedId = (prev === id) ? null : id; // toggle
+  const b = allBillboards.find(x => x.id === selectedId);
+
+  if (isMobile()) {
+    renderMobileSheet();
+    renderMarkers();
+    if (b?.latitude && b?.longitude) {
+      leafMap.setView([b.latitude, b.longitude], 15, { animate: true });
+    }
+    // Scroll card into view in sheet
+    requestAnimationFrame(() => {
+      const card = document.querySelector(`#sheetList [data-id="${selectedId}"]`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  } else {
+    renderGallery();
+    renderMarkers();
+    if (b?.latitude && b?.longitude) {
+      leafMap.setView([b.latitude, b.longitude], 15, { animate: true });
+    }
+    requestAnimationFrame(() => {
+      const card = document.querySelector(`#galleryList [data-id="${selectedId}"]`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    // Desktop detail panel
+    if (!selectedId) {
+      document.getElementById('detailPanel').classList.remove('open');
+      return;
+    }
+    const content = document.getElementById('detailContent');
+    let imgBlock = b?.image_url
+      ? `<div class="detail-img-wrap" id="detailImgWrap"><img class="detail-img" src="${b.image_url}" alt=""></div>`
+      : '';
+    content.innerHTML = `${imgBlock}
+      <span class="detail-category" style="${catStyle(b?.category)}">${b?.category||'Uncategorized'}</span>
+      <div class="detail-ocr">${b?.ocr_text||'(no text detected)'}</div>
+      <div class="detail-coords">📍 ${b?.address||'Unknown'}<br>${(b?.latitude||0).toFixed(6)}, ${(b?.longitude||0).toFixed(6)}<br>🕐 ${formatDate(b?.captured_at,true)}</div>`;
+    if (b?.image_url) {
+      document.getElementById('detailImgWrap')?.addEventListener('click', () => openLightbox(b.image_url));
+    }
+    document.getElementById('detailPanel').classList.add('open');
+  }
+}
+
+document.getElementById('detailClose').onclick = () => {
+  document.getElementById('detailPanel').classList.remove('open');
+  selectedId = null;
+  renderGallery();
+  renderMarkers();
+};
+
+// ── MOBILE SHEET DRAG ────────────────────────────────────
+(function() {
+  const sheet = document.getElementById('mobileSheet');
+  const handle = document.getElementById('sheetHandle');
+  let startY = 0, startH = 0, dragging = false;
+  const vh = () => window.innerHeight;
+
+  function getH() { return sheet.offsetHeight; }
+
+  handle.addEventListener('touchstart', e => {
+    dragging = true;
+    startY = e.touches[0].clientY;
+    startH = getH();
+    sheet.style.transition = 'none';
+  }, { passive: true });
+
+  window.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dy = startY - e.touches[0].clientY;
+    const newH = Math.max(72, Math.min(vh() * 0.92, startH + dy));
+    sheet.style.height = newH + 'px';
+    sheet.classList.remove('expanded','collapsed');
+  }, { passive: true });
+
+  window.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    sheet.style.transition = '';
+    const h = getH();
+    // Snap logic
+    if (h > vh() * 0.6) {
+      sheet.style.height = '';
+      sheet.classList.add('expanded');
+      sheet.classList.remove('collapsed');
+    } else if (h < vh() * 0.15) {
+      sheet.style.height = '';
+      sheet.classList.add('collapsed');
+      sheet.classList.remove('expanded');
+    } else {
+      sheet.style.height = '36vh';
+      sheet.classList.remove('expanded','collapsed');
+    }
+  });
+
+  // Also tap handle to toggle
+  handle.addEventListener('click', () => {
+    if (sheet.classList.contains('expanded')) {
+      sheet.classList.remove('expanded');
+      sheet.style.height = '36vh';
+    } else {
+      sheet.classList.add('expanded');
+      sheet.classList.remove('collapsed');
+      sheet.style.height = '';
+    }
+  });
+})();
+
+// ── SEARCH ───────────────────────────────────────────────
+function handleSearch(val) {
+  searchQuery = val.toLowerCase().trim();
+  applyFilters();
+}
+document.getElementById('searchBox').addEventListener('input', e => handleSearch(e.target.value));
+document.getElementById('mobileSearchBox').addEventListener('input', e => handleSearch(e.target.value));
+
+// ── LIGHTBOX ─────────────────────────────────────────────
+function openLightbox(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+document.getElementById('lightbox').addEventListener('click', e => { if(e.target===document.getElementById('lightbox')) closeLightbox(); });
+document.getElementById('lightboxClose').onclick = closeLightbox;
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeLightbox(); });
+
+// ── STATS ────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('totalCount').textContent = allBillboards.length;
+  const cats = new Set(allBillboards.map(b=>b.category).filter(Boolean));
+  document.getElementById('categoryCount').textContent = cats.size;
+}
+
+// ── DATE ────────────────────────────────────────────────
+function formatDate(iso, full=false) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return full ? d.toLocaleString() : d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+// ── INIT ─────────────────────────────────────────────────
+fetchBillboards();
+setInterval(fetchBillboards, 60000);
+
+// Invalidate map size on resize (mobile sheet resize)
+window.addEventListener('resize', () => leafMap.invalidateSize());
+</script>
+</body>
+</html>
