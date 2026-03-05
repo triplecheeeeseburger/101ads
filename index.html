@@ -1127,10 +1127,18 @@ function renderMobileSheet() {
         📍 ${b.address||'Unknown location'}<br>
         ${(b.latitude||0).toFixed(6)}, ${(b.longitude||0).toFixed(6)}<br>
         🕐 ${formatDate(b.captured_at, true)}
-      </div>`;
+      </div>
+      <button onclick="event.stopPropagation();selectBillboard('${b.id}')" style="margin-top:10px;width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--text2);cursor:pointer;font-weight:500;">Close ↑</button>`;
 
     card.appendChild(header);
     card.appendChild(expanded);
+
+    // Add chevron to header
+    const chevron = document.createElement('div');
+    chevron.style.cssText = 'flex-shrink:0;color:var(--text3);font-size:12px;transition:transform 0.2s;margin-left:4px;';
+    chevron.textContent = '›';
+    if (b.id === selectedId) chevron.style.transform = 'rotate(90deg)';
+    header.appendChild(chevron);
 
     header.addEventListener('click', () => selectBillboard(b.id));
     list.appendChild(card);
@@ -1167,16 +1175,25 @@ function selectBillboard(id) {
   const b = allBillboards.find(x => x.id === selectedId);
 
   if (isMobile()) {
-    renderMobileSheet();
+    // Toggle in-place without full re-render to avoid scroll jump
+    document.querySelectorAll('#sheetList .mobile-card').forEach(el => {
+      const isThis = el.dataset.id === selectedId;
+      el.classList.toggle('selected', isThis);
+      el.classList.toggle('expanded', isThis);
+      const chevron = el.querySelector('.mobile-card-header div:last-child');
+      if (chevron) chevron.style.transform = isThis ? 'rotate(90deg)' : '';
+    });
     renderMarkers();
     if (b?.latitude && b?.longitude) {
       leafMap.setView([b.latitude, b.longitude], 15, { animate: true });
     }
-    // Scroll card into view in sheet
-    requestAnimationFrame(() => {
-      const card = document.querySelector(`#sheetList [data-id="${selectedId}"]`);
-      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
+    // Scroll expanded card into view
+    if (selectedId) {
+      requestAnimationFrame(() => {
+        const card = document.querySelector(`#sheetList [data-id="${selectedId}"]`);
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
   } else {
     renderGallery();
     renderMarkers();
