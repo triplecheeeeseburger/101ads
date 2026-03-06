@@ -1810,9 +1810,7 @@ async function submitContact() {
 }
 
 // ── INIT ─────────────────────────────────────────────────
-// Initial full load, then incremental sync every 30s
 initialFetch();
-setInterval(syncNewBillboards, 30000);
 
 // Invalidate map size on resize (mobile sheet resize)
 window.addEventListener('resize', () => leafMap.invalidateSize());
