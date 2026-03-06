@@ -128,7 +128,7 @@
     transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: hidden; /* desktop: columns each scroll independently */
   }
 
   .about-panel.open { transform: translateX(0); }
@@ -351,11 +351,25 @@
     border: 1px solid #b7f5c8;
   }
 
-  /* Mobile about: single column, scrollable */
+  /* Mobile about: single scrollable column, contact below text */
   @media (max-width: 768px) {
-    .about-text-col { padding: 28px 24px; border-right: none; }
-    .about-sidebar { width: 100%; padding: 28px 24px; border-top: 1px solid var(--border-light); }
-    .about-content { flex-direction: column; overflow-y: auto; }
+    .about-panel { overflow-y: auto; }
+    .about-content {
+      flex-direction: column;
+      overflow: visible; /* let the panel itself scroll */
+      min-height: 0;
+    }
+    .about-text-col {
+      overflow: visible; /* no inner scroll — panel scrolls */
+      padding: 28px 24px;
+      border-right: none;
+    }
+    .about-sidebar {
+      width: 100%;
+      padding: 28px 24px;
+      border-top: 1px solid var(--border-light);
+      background: var(--surface2);
+    }
     .about-headline { font-size: 24px; }
     .about-header { padding: 16px 20px; }
   }
@@ -1207,7 +1221,7 @@
         </div>
       </div>
   </div>
-</div>
+</div><!-- /.main -->
 
 <!-- MOBILE BOTTOM SHEET (outside main flow, fixed to bottom) -->
 <div class="mobile-sheet" id="mobileSheet">
@@ -1236,15 +1250,9 @@
 const SUPABASE_URL = 'https://ewjnpoziinaprmkxjnhu.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_9TACfIEqKqnNETuV_P0YZw_uohUpV9c';
 const MAX_PILLS = 5;
-const PALETTE = [
-  '#0071e3','#34c759','#ff9500','#ff3b30',
-  '#af52de','#5ac8fa','#ffcc00','#ff2d55',
-  '#30b0c7','#32ade6','#64d2ff','#30d158'
-];
-
 let allBillboards = [], filtered = [];
 let selectedId = null, activeFilter = 'all', searchQuery = '';
-let markerLayer = {}, catColorMap = {};
+let markerLayer = {};
 const isMobile = () => window.innerWidth <= 768;
 
 // ── MAP ──────────────────────────────────────────────────
@@ -1255,14 +1263,44 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 L.control.zoom({ position: 'bottomright' }).addTo(leafMap);
 
 // ── COLORS ───────────────────────────────────────────────
-function assignColors(cats) {
-  catColorMap = {};
-  cats.forEach((c, i) => catColorMap[c] = PALETTE[i % PALETTE.length]);
-}
-function catColor(cat) { return catColorMap[cat] || '#8e8e93'; }
+// Fixed semantic colors per category — consistent regardless of data order
+const CAT_COLORS = {
+  'AI & Tech':            '#0071e3',
+  'Pharma & Health':      '#34c759',
+  'Finance':              '#ff9500',
+  'Real Estate':          '#ff3b30',
+  'Entertainment':        '#af52de',
+  'Food & Beverage':      '#ff2d55',
+  'Automotive':           '#5ac8fa',
+  'Education':            '#ffcc00',
+  'Government & Public':  '#30b0c7',
+  'Retail':               '#32ade6',
+  'Other':                '#8e8e93',
+  'Uncategorized':        '#aeaeb2',
+};
+function assignColors() {} // no-op, kept for call-site compat
+function catColor(cat) { return CAT_COLORS[cat] || '#8e8e93'; }
 function catStyle(cat) {
   const c = catColor(cat);
   return `background:${c}18;color:${c};`;
+}
+
+// ── NORMALIZE ────────────────────────────────────────────
+// Canonicalize category names so DB variants (e.g. "Healthcare") map to display names
+const CAT_MAP = {
+  'healthcare': 'Pharma & Health', 'health': 'Pharma & Health',
+  'pharma': 'Pharma & Health', 'pharma & health': 'Pharma & Health',
+  'ai & tech': 'AI & Tech', 'ai': 'AI & Tech', 'tech': 'AI & Tech',
+  'food & beverage': 'Food & Beverage', 'food': 'Food & Beverage',
+  'real estate': 'Real Estate', 'finance': 'Finance',
+  'entertainment': 'Entertainment', 'automotive': 'Automotive',
+  'education': 'Education', 'government & public': 'Government & Public',
+  'government': 'Government & Public', 'retail': 'Retail',
+  'other': 'Other', 'uncategorized': 'Uncategorized',
+};
+function normalizeBillboard(b) {
+  const raw = (b.category || 'Uncategorized').trim();
+  return { ...b, category: CAT_MAP[raw.toLowerCase()] || raw };
 }
 
 // ── FETCH ────────────────────────────────────────────────
@@ -1279,7 +1317,7 @@ async function initialFetch() {
     );
     const data = await res.json();
     if (!Array.isArray(data)) throw new Error();
-    allBillboards = data;
+    allBillboards = data.map(normalizeBillboard);
     // Track the newest timestamp so incremental sync knows where to start
     if (data.length > 0) {
       lastFetchedAt = data.reduce((max, b) =>
@@ -1315,7 +1353,7 @@ async function syncNewBillboards() {
 
     // Merge new rows, dedupe by id, keep sorted newest-first
     const existingIds = new Set(allBillboards.map(b => b.id));
-    const truly_new = newRows.filter(b => !existingIds.has(b.id));
+    const truly_new = newRows.filter(b => !existingIds.has(b.id)).map(normalizeBillboard);
     if (truly_new.length === 0) return;
 
     allBillboards = [...truly_new, ...allBillboards];
@@ -1368,7 +1406,7 @@ function buildPills() {
     const btn = document.createElement('button');
     const isActive = activeFilter === cat;
     btn.className = 'pill' + (isActive?' active':'');
-    btn.textContent = cat;
+    btn.innerHTML = `${cat} <span style="opacity:0.6;font-weight:400;font-size:10px;">${freq[cat]}</span>`;
     if (isActive) btn.style.cssText = `background:${catColor(cat)};border-color:${catColor(cat)};color:#fff;`;
     btn.onclick = () => setFilter(cat);
     container.appendChild(btn);
@@ -1490,6 +1528,9 @@ function renderMobileSheet() {
       const img = document.createElement('img');
       img.src = b.image_url; img.alt = ''; img.loading = 'lazy';
       imgDiv.appendChild(img);
+      // Tap thumbnail → lightbox (stop propagation so card doesn't also toggle)
+      imgDiv.style.cursor = 'zoom-in';
+      imgDiv.addEventListener('click', e => { e.stopPropagation(); openLightbox(b.image_url); });
     } else {
       imgDiv.textContent = '🖼';
     }
@@ -1503,24 +1544,32 @@ function renderMobileSheet() {
     header.appendChild(imgDiv);
     header.appendChild(cardBody);
 
-    // Expanded content
+    // Expanded content — build entirely with DOM (no innerHTML +=) to preserve event listeners
     const expanded = document.createElement('div');
     expanded.className = 'mobile-card-expanded';
     if (b.image_url) {
       const img = document.createElement('img');
       img.className = 'mobile-expanded-img';
       img.src = b.image_url; img.alt = '';
-      img.addEventListener('click', () => openLightbox(b.image_url));
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', e => { e.stopPropagation(); openLightbox(b.image_url); });
       expanded.appendChild(img);
     }
-    expanded.innerHTML += `
-      <div class="mobile-expanded-ocr">${b.ocr_text||'(no text detected)'}</div>
-      <div class="mobile-expanded-meta">
-        📍 ${b.address||'Unknown location'}<br>
-        ${(b.latitude||0).toFixed(6)}, ${(b.longitude||0).toFixed(6)}<br>
-        🕐 ${formatDate(b.captured_at, true)}
-      </div>
-      <button onclick="event.stopPropagation();selectBillboard('${b.id}')" style="margin-top:10px;width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--text2);cursor:pointer;font-weight:500;">Close ↑</button>`;
+    const ocrDiv = document.createElement('div');
+    ocrDiv.className = 'mobile-expanded-ocr';
+    ocrDiv.textContent = b.ocr_text || '(no text detected)';
+    expanded.appendChild(ocrDiv);
+
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'mobile-expanded-meta';
+    metaDiv.innerHTML = `📍 ${b.address||'Unknown location'}<br>${(b.latitude||0).toFixed(6)}, ${(b.longitude||0).toFixed(6)}<br>🕐 ${formatDate(b.captured_at, true)}`;
+    expanded.appendChild(metaDiv);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close ↑';
+    closeBtn.style.cssText = 'margin-top:10px;width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--text2);cursor:pointer;font-weight:500;';
+    closeBtn.addEventListener('click', e => { e.stopPropagation(); selectBillboard(b.id); });
+    expanded.appendChild(closeBtn);
 
     card.appendChild(header);
     card.appendChild(expanded);
