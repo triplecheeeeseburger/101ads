@@ -668,6 +668,70 @@
     font-weight: 400;
   }
 
+  .card-company {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+  }
+  .card-company-logo {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    object-fit: contain;
+    background: var(--surface2);
+    flex-shrink: 0;
+  }
+  .card-company-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
+  }
+  .card-company-name:hover { color: var(--accent); text-decoration: underline; }
+
+  /* DETAIL PANEL company block */
+  .detail-company {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+  }
+  .detail-company-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    object-fit: contain;
+    background: #fff;
+    padding: 3px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+  .detail-company-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .detail-company-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .detail-company-name:hover { color: var(--accent); text-decoration: underline; }
+  .detail-company-url {
+    font-size: 11px;
+    color: var(--text3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* EXPANDED CARD (mobile in-place expand) */
   .billboard-card.expanded .card-img {
     display: none;
@@ -1066,6 +1130,18 @@
       color: var(--text3);
     }
 
+    .mobile-company {
+      display: flex; align-items: center; gap: 5px; margin-top: 4px;
+    }
+    .mobile-company-logo {
+      width: 14px; height: 14px; border-radius: 2px; object-fit: contain;
+    }
+    .mobile-company-name {
+      font-size: 11px; font-weight: 600; color: var(--text2);
+      text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mobile-company-name:hover { color: var(--accent); }
+
     /* Expanded card body */
     .mobile-card-expanded {
       display: none;
@@ -1453,7 +1529,9 @@ function applyFilters() {
     const matchCat = activeFilter==='all' || (b.category||'').trim()===activeFilter;
     const matchSearch = !searchQuery ||
       (b.ocr_text||'').toLowerCase().includes(searchQuery) ||
-      (b.address||'').toLowerCase().includes(searchQuery);
+      (b.address||'').toLowerCase().includes(searchQuery) ||
+      (b.company_name||'').toLowerCase().includes(searchQuery) ||
+      (b.company_url||'').toLowerCase().includes(searchQuery);
     return matchCat && matchSearch;
   });
   renderGallery();
@@ -1490,8 +1568,22 @@ function renderGallery() {
 
     const body = document.createElement('div');
     body.className = 'card-body';
+
+    // Build company row HTML (logo + linked name)
+    let companyHtml = '';
+    if (b.company_name) {
+      const logoTag = b.company_logo_url
+        ? `<img class="card-company-logo" src="${b.company_logo_url}" alt="" onerror="this.style.display='none'">`
+        : '';
+      const nameTag = b.company_url
+        ? `<a class="card-company-name" href="${b.company_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${b.company_name}</a>`
+        : `<span class="card-company-name">${b.company_name}</span>`;
+      companyHtml = `<div class="card-company">${logoTag}${nameTag}</div>`;
+    }
+
     body.innerHTML = `
       <span class="card-category" style="${catStyle(b.category)}">${b.category||'Uncategorized'}</span>
+      ${companyHtml}
       <div class="card-ocr">${b.ocr_text||'(no text detected)'}</div>
       <div class="card-meta">${b.address?b.address.split(',')[0]:`${(b.latitude||0).toFixed(4)}, ${(b.longitude||0).toFixed(4)}`} · ${formatDate(b.captured_at)}</div>`;
 
@@ -1537,8 +1629,22 @@ function renderMobileSheet() {
 
     const cardBody = document.createElement('div');
     cardBody.className = 'mobile-card-body';
+
+    // Company row for mobile header
+    let mobileCompanyHtml = '';
+    if (b.company_name) {
+      const logoTag = b.company_logo_url
+        ? `<img class="mobile-company-logo" src="${b.company_logo_url}" alt="" onerror="this.style.display='none'">`
+        : '';
+      const nameTag = b.company_url
+        ? `<a class="mobile-company-name" href="${b.company_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${b.company_name}</a>`
+        : `<span class="mobile-company-name">${b.company_name}</span>`;
+      mobileCompanyHtml = `<div class="mobile-company">${logoTag}${nameTag}</div>`;
+    }
+
     cardBody.innerHTML = `
       <div class="mobile-card-ocr">${b.ocr_text||'(no text detected)'}</div>
+      ${mobileCompanyHtml}
       <div class="mobile-card-meta"><span style="${catStyle(b.category)};padding:1px 5px;border-radius:3px;font-size:10px;font-weight:600;">${b.category||'?'}</span> · ${formatDate(b.captured_at)}</div>`;
 
     header.appendChild(imgDiv);
@@ -1655,8 +1761,24 @@ function selectBillboard(id) {
     let imgBlock = b?.image_url
       ? `<div class="detail-img-wrap" id="detailImgWrap"><img class="detail-img" src="${b.image_url}" alt=""></div>`
       : '';
+    // Build company block for detail panel
+    let companyBlock = '';
+    if (b?.company_name) {
+      const logoTag = b.company_logo_url
+        ? `<img class="detail-company-logo" src="${b.company_logo_url}" alt="" onerror="this.style.display='none'">`
+        : '';
+      const nameTag = b.company_url
+        ? `<a class="detail-company-name" href="${b.company_url}" target="_blank" rel="noopener">${b.company_name}</a>`
+        : `<span class="detail-company-name">${b.company_name}</span>`;
+      const urlLine = b.company_url
+        ? `<span class="detail-company-url">${b.company_url.replace(/^https?:\/\//,'')}</span>`
+        : '';
+      companyBlock = `<div class="detail-company">${logoTag}<div class="detail-company-info">${nameTag}${urlLine}</div></div>`;
+    }
+
     content.innerHTML = `${imgBlock}
       <span class="detail-category" style="${catStyle(b?.category)}">${b?.category||'Uncategorized'}</span>
+      ${companyBlock}
       <div class="detail-ocr">${b?.ocr_text||'(no text detected)'}</div>
       <div class="detail-coords">📍 ${b?.address||'Unknown'}<br>${(b?.latitude||0).toFixed(6)}, ${(b?.longitude||0).toFixed(6)}<br>🕐 ${formatDate(b?.captured_at,true)}</div>`;
     if (b?.image_url) {
@@ -1810,7 +1932,9 @@ async function submitContact() {
 }
 
 // ── INIT ─────────────────────────────────────────────────
+// Initial full load, then incremental sync every 30s
 initialFetch();
+setInterval(syncNewBillboards, 30000);
 
 // Invalidate map size on resize (mobile sheet resize)
 window.addEventListener('resize', () => leafMap.invalidateSize());
