@@ -695,11 +695,9 @@
   .card-img img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    object-position: 62% 28%;
+    object-fit: contain;
     display: block;
     pointer-events: none;
-    transform: scale(1.45);
     transition: transform 0.35s ease;
   }
 
@@ -836,7 +834,7 @@
   .expanded-img {
     width: 100%;
     border-radius: 8px;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
     margin-bottom: 10px;
     cursor: zoom-in;
@@ -992,7 +990,7 @@
     width: 100%;
     height: 110px;
     max-height: 160px;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
   }
 
@@ -1260,7 +1258,7 @@
     .mobile-card-img img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       pointer-events: none;
     }
 
@@ -1308,7 +1306,7 @@
     .mobile-expanded-img {
       width: 100%;
       border-radius: 8px;
-      object-fit: cover;
+      object-fit: contain;
       display: block;
       margin: 10px 0 10px;
       max-height: 200px;
@@ -1505,11 +1503,12 @@ const SUPABASE_KEY = 'sb_publishable_9TACfIEqKqnNETuV_P0YZw_uohUpV9c';
 // Uses Google's favicon service (reliable, no auth, no CORS issues).
 // Falls back gracefully via onerror on the img element.
 function logoUrl(b) {
-  const url = b.company_logo_url || b.company_url;
+  // Skip Clearbit URLs — that service is defunct and returns 404s.
+  // Always derive from company_url via Google's favicon service instead.
+  const url = b.company_url || (b.company_logo_url && !b.company_logo_url.includes('clearbit') ? b.company_logo_url : null);
   if (!url) return null;
   try {
-    const hostname = new URL(url.trim()).hostname;
-    // sz=128 gives a crisp logo at our display size
+    const hostname = new URL(url.trim().startsWith('http') ? url.trim() : 'https://' + url.trim()).hostname;
     return `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
   } catch { return null; }
 }
