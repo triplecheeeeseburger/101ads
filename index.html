@@ -101,6 +101,30 @@
   }
 
   /* About button */
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .header-pill-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--accent);
+    background: rgba(0,113,227,0.07);
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .header-pill-btn:hover { background: var(--accent); color: #fff; }
+
   .about-btn {
     background: none;
     border: 1px solid var(--border);
@@ -116,6 +140,62 @@
     white-space: nowrap;
   }
   .about-btn:hover { border-color: var(--text); color: var(--text); background: var(--surface2); }
+
+  /* Hamburger — hidden on desktop, shown on mobile */
+  .hamburger-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .hamburger-btn span {
+    display: block;
+    width: 15px;
+    height: 1.5px;
+    background: var(--text2);
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .hamburger-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+    min-width: 180px;
+    overflow: hidden;
+    z-index: 1000;
+  }
+  .hamburger-menu.open { display: block; }
+  .hamburger-menu button {
+    display: block;
+    width: 100%;
+    padding: 13px 18px;
+    text-align: left;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .hamburger-menu button:hover { background: var(--surface2); }
+  .hamburger-menu button + button { border-top: 1px solid var(--border-light); }
 
   /* ── ABOUT PANEL ── */
   .about-panel {
@@ -1008,6 +1088,8 @@
     }
 
     .logo-sub, .header-stats { display: none; }
+    .header-pill-btn, .about-btn { display: none; }
+    .hamburger-btn { display: flex; }
 
     .filter-pills {
       overflow-x: auto;
@@ -1143,6 +1225,16 @@
       box-shadow: 0 0 0 2px rgba(0,113,227,0.1);
     }
 
+    .mobile-card-chevron {
+      flex-shrink: 0;
+      color: var(--text3);
+      font-size: 14px;
+      font-weight: 300;
+      transition: transform 0.2s;
+      margin-left: 4px;
+      line-height: 1;
+    }
+
     .mobile-card-header {
       display: flex;
       gap: 10px;
@@ -1269,12 +1361,20 @@
         <div class="stat-num" id="categoryCount">—</div>
         <div class="stat-label">Categories</div>
       </div>
-      <div class="stat stat-brand" id="topBrandStat" style="display:none">
-        <div class="stat-num" id="topBrandName" style="font-size:12px;letter-spacing:0;"></div>
-        <div class="stat-label">Top Brand <button class="stat-plus-btn" onclick="openStats()" title="View brand stats">+</button></div>
+    </div>
+    <div class="header-actions">
+      <button class="header-pill-btn" onclick="openStats()" title="View brand stats">Full Stats</button>
+      <button class="about-btn" onclick="openAbout()">About</button>
+      <!-- Hamburger: mobile only -->
+      <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleHamburger()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <!-- Hamburger dropdown -->
+      <div class="hamburger-menu" id="hamburgerMenu">
+        <button onclick="openStats(); closeHamburger()">📊 Full Stats</button>
+        <button onclick="openAbout(); closeHamburger()">ℹ️ About</button>
       </div>
     </div>
-    <button class="about-btn" onclick="openAbout()">About</button>
   </header>
 
   <!-- Stats overlay + panel -->
@@ -1767,14 +1867,19 @@ function renderMobileSheet() {
     card.appendChild(header);
     card.appendChild(expanded);
 
-    // Add chevron to header
+    // Chevron indicator
     const chevron = document.createElement('div');
-    chevron.style.cssText = 'flex-shrink:0;color:var(--text3);font-size:12px;transition:transform 0.2s;margin-left:4px;';
+    chevron.className = 'mobile-card-chevron';
     chevron.textContent = '›';
     if (b.id === selectedId) chevron.style.transform = 'rotate(90deg)';
     header.appendChild(chevron);
 
-    header.addEventListener('click', () => selectBillboard(b.id));
+    // Single click listener on the whole card header row (not card itself to avoid expanded content conflicts)
+    header.addEventListener('click', e => {
+      // Don't toggle if they tapped the thumbnail (that opens lightbox)
+      if (e.target.closest('.mobile-card-img')) return;
+      selectBillboard(b.id);
+    });
     list.appendChild(card);
   });
 }
@@ -1814,7 +1919,7 @@ function selectBillboard(id) {
       const isThis = el.dataset.id === selectedId;
       el.classList.toggle('selected', isThis);
       el.classList.toggle('expanded', isThis);
-      const chevron = el.querySelector('.mobile-card-header div:last-child');
+      const chevron = el.querySelector('.mobile-card-chevron');
       if (chevron) chevron.style.transform = isThis ? 'rotate(90deg)' : '';
     });
     renderMarkers();
@@ -1969,8 +2074,7 @@ function updateStats() {
   });
   const topBrand = Object.entries(brandFreq).sort((a,b)=>b[1]-a[1])[0];
   if (topBrand) {
-    document.getElementById('topBrandName').textContent = topBrand[0];
-    document.getElementById('topBrandStat').style.display = '';
+    // topBrandStat removed from header — shown in Full Stats panel only
   }
 }
 
@@ -1983,7 +2087,17 @@ function formatDate(iso, full=false) {
 
 
 // ── STATS PANEL ─────────────────────────────────────────
-function openStats() {
+function toggleHamburger() {
+    document.getElementById('hamburgerMenu').classList.toggle('open');
+  }
+  function closeHamburger() {
+    document.getElementById('hamburgerMenu').classList.remove('open');
+  }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.header-actions')) closeHamburger();
+  });
+
+  function openStats() {
   document.getElementById('statsPanel').classList.add('open');
   document.getElementById('statsOverlay').classList.add('open');
   renderStatsPanel();
