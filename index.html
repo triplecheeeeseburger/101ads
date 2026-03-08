@@ -863,21 +863,22 @@
   .detail-panel {
     position: absolute;
     bottom: 0;
-    left: 0;
-    right: 0;
+    left: 50%;
+    right: auto;
+    width: 500px;
     background: var(--surface);
     border-top: 1px solid var(--border-light);
-    border-radius: var(--radius) var(--radius) 0 0;
+    border-radius: 14px 14px 0 0;
     padding: 20px;
-    transform: translateY(100%);
+    transform: translateX(-50%) translateY(100%);
     transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
     z-index: 400;
-    max-height: 50%;
+    max-height: 65%;
     overflow-y: auto;
-    box-shadow: var(--sheet-shadow);
+    box-shadow: 0 -6px 36px rgba(0,0,0,0.16);
   }
 
-  .detail-panel.open { transform: translateY(0); }
+  .detail-panel.open { transform: translateX(-50%) translateY(0); }
 
   .detail-close {
     position: absolute;
@@ -909,7 +910,7 @@
 
   .detail-img {
     width: 100%;
-    height: 160px;
+    height: 110px;
     max-height: 160px;
     object-fit: cover;
     display: block;
