@@ -1003,15 +1003,38 @@
     cursor: zoom-in;
     border-radius: var(--radius-sm);
     overflow: hidden;
+    height: 220px;
   }
 
   .detail-img {
     width: 100%;
-    height: 110px;
-    max-height: 160px;
-    object-fit: contain;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
     display: block;
+    transition: transform 0.35s ease;
   }
+
+  .detail-img-wrap:hover .detail-img {
+    transform: scale(1.03);
+  }
+
+  .detail-img-zoom-hint {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.15s;
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+  }
+
+  .detail-img-wrap:hover .detail-img-zoom-hint { opacity: 1; }
 
   .detail-category {
     font-size: 10px;
@@ -2048,7 +2071,7 @@ function selectBillboard(id) {
     }
     const content = document.getElementById('detailContent');
     let imgBlock = b?.image_url
-      ? `<div class="detail-img-wrap" id="detailImgWrap"><img class="detail-img" src="${b.image_url}" alt=""></div>`
+      ? `<div class="detail-img-wrap" id="detailImgWrap"><img class="detail-img" src="${b.image_url}" alt=""><div class="detail-img-zoom-hint">⤢</div></div>`
       : '';
     // Build company block for detail panel
     let companyBlock = '';
