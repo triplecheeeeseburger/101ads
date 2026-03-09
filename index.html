@@ -112,18 +112,19 @@
   .header-pill-btn {
     padding: 6px 14px;
     border-radius: 20px;
-    border: 1px solid var(--accent);
-    background: rgba(0,113,227,0.07);
-    color: var(--accent);
+    border: 1.5px solid #e03d00;
+    background: rgba(224,61,0,0.08);
+    color: #e03d00;
     font-family: inherit;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.15s;
     flex-shrink: 0;
+    letter-spacing: 0.01em;
   }
-  .header-pill-btn:hover { background: var(--accent); color: #fff; }
+  .header-pill-btn:hover { background: #e03d00; color: #fff; }
 
   .about-btn {
     background: none;
@@ -702,7 +703,7 @@
   }
 
   .billboard-card:hover .card-img img {
-    transform: scale(1.32);
+    transform: scale(1.03);
   }
 
   .card-img .zoom-hint {
@@ -947,7 +948,7 @@
     background: var(--surface);
     border-top: 1px solid var(--border-light);
     border-radius: 14px 14px 0 0;
-    padding: 20px;
+    padding: 48px 20px 20px;
     transform: translateX(-50%) translateY(100%);
     transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
     z-index: 400;
@@ -960,10 +961,10 @@
 
   .detail-close {
     position: absolute;
-    top: 16px;
+    top: 12px;
     right: 16px;
     background: var(--surface2);
-    border: none;
+    border: 1px solid var(--border-light);
     border-radius: 50%;
     color: var(--text2);
     cursor: pointer;
@@ -974,6 +975,7 @@
     align-items: center;
     justify-content: center;
     transition: background 0.15s;
+    z-index: 10;
   }
 
   .detail-close:hover { background: var(--border); }
@@ -1361,7 +1363,7 @@
       </div>
     </div>
     <div class="header-actions">
-      <button class="header-pill-btn" onclick="openStats()" title="View brand stats">Full Stats</button>
+      <button class="header-pill-btn" onclick="openStats()" title="View brand stats">Cool Stats</button>
       <button class="about-btn" onclick="openAbout()">About</button>
       <!-- Hamburger: mobile only -->
       <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleHamburger(event)" aria-label="Menu">
@@ -1369,7 +1371,7 @@
       </button>
       <!-- Hamburger dropdown -->
       <div class="hamburger-menu" id="hamburgerMenu">
-        <button onclick="openStats(); closeHamburger()">📊 Full Stats</button>
+        <button onclick="openStats(); closeHamburger()">📊 Cool Stats</button>
         <button onclick="openAbout(); closeHamburger()">ℹ️ About</button>
       </div>
     </div>
@@ -1415,6 +1417,9 @@
           <p>Cheers, <strong>Dan</strong></p>
           <p style="color:var(--text3);font-size:12px;">March 2026</p>
           <p class="bio">Dan Berte is a senior product manager with a rare flair for public speaking and comms, based in San Francisco, CA.</p>
+          <p style="color:var(--text3);font-size:11px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-light);line-height:1.85;">
+            <strong style="color:var(--text2);">v1.0</strong> &mdash; 80 miles of Hwy 101 driven to capture these billboards. Future versions will extend coverage at least to San Jose. 97,037 Claude tokens used to vibe code the iOS app &amp; this site.
+          </p>
         </div>
       </div>
 
@@ -1427,6 +1432,13 @@
             <div>
               <div>@danberte</div>
               <div class="link-sub">Follow on X</div>
+            </div>
+          </a>
+          <a class="about-link" href="https://www.linkedin.com/in/danberte/" target="_blank" rel="noopener" style="margin-top:8px;">
+            <span class="link-icon" style="font-size:14px;font-weight:700;font-family:sans-serif;color:#0a66c2;">in</span>
+            <div>
+              <div>Dan Berte</div>
+              <div class="link-sub">Connect on LinkedIn</div>
             </div>
           </a>
         </div>
@@ -1503,12 +1515,12 @@ const SUPABASE_KEY = 'sb_publishable_9TACfIEqKqnNETuV_P0YZw_uohUpV9c';
 // Uses Google's favicon service (reliable, no auth, no CORS issues).
 // Falls back gracefully via onerror on the img element.
 function logoUrl(b) {
-  // Skip Clearbit URLs — that service is defunct and returns 404s.
-  // Always derive from company_url via Google's favicon service instead.
+  // Always derive from company_url — Clearbit is defunct, skip it.
   const url = b.company_url || (b.company_logo_url && !b.company_logo_url.includes('clearbit') ? b.company_logo_url : null);
   if (!url) return null;
   try {
-    const hostname = new URL(url.trim().startsWith('http') ? url.trim() : 'https://' + url.trim()).hostname;
+    const raw = url.trim();
+    const hostname = new URL(raw.startsWith('http') ? raw : 'https://' + raw).hostname;
     return `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
   } catch { return null; }
 }
@@ -1877,6 +1889,8 @@ function renderMobileSheet() {
     header.addEventListener('click', e => {
       // Don't toggle if they tapped the thumbnail (that opens lightbox)
       if (e.target.closest('.mobile-card-img')) return;
+      // Don't toggle if they tapped anything inside the expanded section
+      if (e.target.closest('.mobile-card-expanded')) return;
       selectBillboard(b.id);
     });
     list.appendChild(card);
@@ -1902,7 +1916,10 @@ function renderMarkers() {
   });
   if (filtered.length > 0 && !selectedId) {
     const coords = filtered.filter(b=>b.latitude&&b.longitude).map(b=>[b.latitude,b.longitude]);
-    if (coords.length) leafMap.fitBounds(coords, { padding: [40,40] });
+    if (coords.length) {
+      const sheetH = isMobile() ? (document.getElementById('mobileSheet')?.offsetHeight || 0) : 0;
+      leafMap.fitBounds(coords, { paddingTopLeft: [40, 40], paddingBottomRight: [40, 40 + sheetH] });
+    }
   }
 }
 
