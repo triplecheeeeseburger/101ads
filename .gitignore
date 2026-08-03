@@ -23,6 +23,9 @@ BillboardScanner*.zip
 DerivedData/
 
 # ─── Local-only working folders ───────────────────────────────────────────────
+# _showcase/ stages the iOS app and pipeline for a POSSIBLE future public repo.
+# It is deliberately never published from this repo.
+_showcase/
 Mac app/
 danbertedotcom/
 
