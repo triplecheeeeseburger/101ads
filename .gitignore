@@ -1,0 +1,43 @@
+# ─── Secrets ──────────────────────────────────────────────────────────────────
+# The email pipeline .env holds the Supabase service_role key, which bypasses
+# RLS entirely. It must never be committed.
+.env
+.env.*
+!.env.template
+*.pem
+*.p8
+*.p12
+*.key
+*.keystore
+*.mobileprovision
+*.cer
+credentials*
+secrets*
+
+# ─── iOS / native source (not for publication) ────────────────────────────────
+# A zipped copy of this leaked once already; keep it out by name and by folder.
+BillboardScanner*/
+BillboardScanner*.zip
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+
+# ─── Local-only working folders ───────────────────────────────────────────────
+Mac app/
+danbertedotcom/
+
+# ─── OS / editor noise ────────────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# ─── Claude context docs (local reference, not site code) ─────────────────────
+PROJECT_CONTEXT.md
+
+# ─── Backups & archives ───────────────────────────────────────────────────────
+_git-backup-*.tar.gz
+_writetest
+node_modules/

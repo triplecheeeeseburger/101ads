@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>101 Ads — Highway 101 Billboard Map</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCA5MCI+CiAgPHBhdGggZD0iTTQwIDJMNCAxNFY0NEM0IDY2IDQwIDg4IDQwIDg4QzQwIDg4IDc2IDY2IDc2IDQ0VjE0TDQwIDJaIiBmaWxsPSIjMWExYTFhIi8+CiAgPHBhdGggZD0iTTQwIDhMMTAgMThWNDRDMTAgNjIgNDAgODIgNDAgODJDNDAgODIgNzAgNjIgNzAgNDRWMThMNDAgOFoiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41Ii8+CiAgPHJlY3QgeD0iMTAiIHk9IjI2IiB3aWR0aD0iNjAiIGhlaWdodD0iMTQiIGZpbGw9IndoaXRlIi8+CiAgPHRleHQgeD0iNDAiIHk9IjM3IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMWExYTFhIiBmb250LWZhbWlseT0iQXJpYWwgTmFycm93LCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjcwMCIgZm9udC1zaXplPSI5IiBsZXR0ZXItc3BhY2luZz0iMC41Ij5DQUxJRk9STklBPC90ZXh0PgogIDx0ZXh0IHg9IjQwIiB5PSI2OCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJBcmlhbCBOYXJyb3csIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iOTAwIiBmb250LXNpemU9IjMyIiBsZXR0ZXItc3BhY2luZz0iLTEiPjEwMTwvdGV4dD4KPC9zdmc+">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <!-- Highway Shield Logo -->
+    <div class="logo" onclick="openAbout()">
+      <img class="logo-shield" src="https://upload.wikimedia.org/wikipedia/commons/0/09/US_101_%281961_cutout%29.svg" alt="US Route 101" width="38" height="33">
+      <div class="logo-text">
+        <span class="logo-name">101 Ads</span>
+        <span class="logo-sub">Highway 101 · Bay Area</span>
+      </div>
+    </div>
+    <div class="filter-pills" id="filterPills">
+      <button class="pill active" data-cat="all">All</button>
+    </div>
+    <div class="header-stats">
+      <div class="stat">
+        <div class="stat-num" id="totalCount">—</div>
+        <div class="stat-label">Billboards</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="categoryCount">—</div>
+        <div class="stat-label">Categories</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="header-pill-btn" onclick="openStats()" title="View brand stats">Cool Stats</button>
+      <button class="about-btn" onclick="openAbout()">About</button>
+      <!-- Hamburger: mobile only -->
+      <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleHamburger(event)" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <!-- Hamburger dropdown -->
+      <div class="hamburger-menu" id="hamburgerMenu">
+        <button onclick="openStats(); closeHamburger()">📊 Cool Stats</button>
+        <button onclick="openAbout(); closeHamburger()">ℹ️ About</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stats overlay + panel -->
+  <div class="stats-overlay" id="statsOverlay" onclick="closeStats()"></div>
+  <div class="stats-panel" id="statsPanel">
+    <div class="stats-panel-header">
+      <span class="stats-panel-title">📊 Brand Intelligence</span>
+      <button class="stats-panel-close" onclick="closeStats()">✕</button>
+    </div>
+    <div class="stats-panel-body" id="statsPanelBody">
+      <div class="fun-fact" style="color:var(--text3);font-size:12px;">Loading stats…</div>
+    </div>
+  </div>
+
+  <!-- About overlay -->
+  <div class="about-overlay" id="aboutOverlay" onclick="closeAbout()"></div>
+
+  <!-- About panel -->
+  <div class="about-panel" id="aboutPanel">
+    <div class="about-header">
+      <span class="about-title">About 101 Ads</span>
+      <button class="about-close" onclick="closeAbout()">✕</button>
+    </div>
+    <div class="about-content">
+
+      <!-- Left: editorial text -->
+      <div class="about-text-col">
+        <div class="about-eyebrow">101ads.org · San Francisco, CA</div>
+        <div class="about-headline">Silicon Valley's most insane billboards, mapped.</div>
+
+        <p class="lead">Billboards in Silicon Valley are world famous. And, to put it mildly, insane!</p>
+        <p>For locals, they're just life as usual in the Bay Area, but for visitors from around the world, they are mind bending artifacts of the tech domain — often striking, unintelligible, absurd, vague and dissonant. They're dedicated to very small groups of decision makers who commute daily on the main highway that connects it all: US Route 101, or, as locals call it, the 101. They're also breadcrumbs of the state of the art of Silicon Valley. They are culture.</p>
+        <p>I drive up and down the corridor weekly, alongside millions of fellow Bay Area residents, and marvel at the billboards too. Visitors take photos of them in disbelief and post them on X. Stuck in rush hour traffic, they become conversations in the car — or distractions from crawling traffic.</p>
+        <p>I vibe coded this site with Claude because I wanted a snapshot of all the world famous ads, with some stats on the types of companies behind them (unsurprisingly, yes — AI &amp; Tech). Browse along the 101, each dot color representing a category, or tap any billboard card for details.</p>
+        <p>To collect the data, I asked Claude to build an iOS app using Vision to analyze frames as I'm driving — snapping photos, cropping them, running OCR, and publishing to 101ads.org with minimal input from me. I just had to do the driving. Or use Waymo.</p>
+        <p>This is a fun project. I'll do my best to keep it fresh roughly every month.</p>
+        <p>To visitors from around the world — I hear you. This is Silicon Valley billboard insanity and I'm happy to take you along.</p>
+
+        <div class="about-signature">
+          <p>Cheers, <strong>Dan</strong></p>
+          <p style="color:var(--text3);font-size:12px;">March 2026</p>
+          <p class="bio">Dan Berte is a senior product manager with a rare flair for public speaking and comms, based in San Francisco, CA.</p>
+          <p style="color:var(--text3);font-size:11px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-light);line-height:1.85;">
+            <strong style="color:var(--text2);">v2.0</strong> &mdash; Modular rebuild with time-travel feature. 80+ miles of Hwy 101 driven to capture these billboards.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right: connect sidebar -->
+      <div class="about-sidebar">
+        <div>
+          <div class="sidebar-section-title">Follow</div>
+          <a class="about-link" href="https://x.com/danberte" target="_blank" rel="noopener">
+            <span class="link-icon">𝕏</span>
+            <div>
+              <div>@danberte</div>
+              <div class="link-sub">Follow on X</div>
+            </div>
+          </a>
+          <a class="about-link" href="https://www.linkedin.com/in/danberte/" target="_blank" rel="noopener" style="margin-top:8px;">
+            <span class="link-icon" style="font-size:14px;font-weight:700;font-family:sans-serif;color:#0a66c2;">in</span>
+            <div>
+              <div>Dan Berte</div>
+              <div class="link-sub">Connect on LinkedIn</div>
+            </div>
+          </a>
+        </div>
+
+        <div>
+          <div class="sidebar-section-title">Send a message</div>
+          <div class="contact-form" id="contactForm">
+            <input type="text" id="contactName" placeholder="Your name" autocomplete="off">
+            <input type="email" id="contactEmail" placeholder="Your email" autocomplete="off">
+            <textarea id="contactMsg" rows="4" placeholder="Your message…"></textarea>
+            <button class="contact-submit" id="contactSubmit" onclick="submitContact()">Send →</button>
+            <div class="contact-success" id="contactSuccess">✓ Message sent! Thanks for reaching out.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- MAP -->
+    <div class="map-panel">
+      <div id="map"></div>
+      <div class="map-badge" id="mapBadge">Loading…</div>
+      <!-- Time chip bar — floats over map -->
+      <div class="time-chip-bar" id="timeChips" style="display:none;"></div>
+      <button class="stats-fab" id="statsFab" onclick="openStats()" aria-label="Cool Stats">
+        <span class="stats-fab-icon">📊</span>
+        <span class="stats-fab-label">Cool Stats</span>
+      </button>
+      <!-- Desktop detail panel -->
+      <div class="detail-panel" id="detailPanel">
+        <button class="detail-close" id="detailClose">✕</button>
+        <div id="detailContent"></div>
+      </div>
+    </div>
+
+    <!-- DESKTOP GALLERY -->
+    <div class="gallery-panel">
+      <div class="gallery-header">
+        <input class="search-box" type="text" placeholder="Search billboards…" id="searchBox">
+      </div>
+      <div class="gallery-list" id="galleryList">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          Loading billboards…
+        </div>
+      </div>
+  </div>
+</div><!-- /.main -->
+
+<!-- MOBILE BOTTOM SHEET (outside main flow, fixed to bottom) -->
+<div class="mobile-sheet" id="mobileSheet">
+  <div class="sheet-handle" id="sheetHandle">
+    <div class="handle-bar"></div>
+    <div class="sheet-meta-row">
+      <span class="sheet-count" id="sheetCount">Loading…</span>
+    </div>
+  </div>
+  <input class="sheet-search" type="text" placeholder="Search billboards…" id="mobileSearchBox">
+  <div class="sheet-list" id="sheetList">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      Loading…
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose">✕</button>
+  <img id="lightboxImg" src="" alt="billboard">
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
