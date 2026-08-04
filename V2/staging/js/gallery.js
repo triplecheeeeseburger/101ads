@@ -94,7 +94,17 @@ export function renderDetailPanel() {
     <div class="detail-ocr">${b.ocr_text || '(no text detected)'}</div>
     <div class="detail-coords">📍 ${b.address || 'Unknown'}<br>${(b.latitude || 0).toFixed(6)}, ${(b.longitude || 0).toFixed(6)}<br>🕐 ${formatDate(b.captured_at, true)}</div>`;
   if (b.image_url) {
-    document.getElementById('detailImgWrap')?.addEventListener('click', () => openLightbox(b.image_url));
+    const wrap = document.getElementById('detailImgWrap');
+    wrap?.addEventListener('click', () => openLightbox(b.image_url));
+
+    // The detail image has the same problem the cards had, just less obviously:
+    // a fixed 220px-tall box (~2.09 aspect) with `object-fit: cover` centred.
+    // A 1080x1920 phone photo gets reduced to a thin band across the middle of
+    // the frame, which is not where the billboard is. Frame it the same way.
+    const dImg = wrap?.querySelector('.detail-img');
+    if (dImg && wrap.offsetWidth && wrap.offsetHeight) {
+      observeFrame(dImg, b.image_url, wrap.offsetWidth / wrap.offsetHeight, b.crop_box);
+    }
   }
   document.getElementById('detailPanel').classList.add('open');
 }
