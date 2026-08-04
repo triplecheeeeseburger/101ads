@@ -1,4 +1,4 @@
-// ── MAP — Leaflet init, markers, fitBounds ───────────────
+// ── MAP - Leaflet init, markers, fitBounds ───────────────
 import { catColor, isMobile } from './config.js';
 import { filtered, selectedId } from './data.js';
 

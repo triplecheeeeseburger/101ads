@@ -1,4 +1,4 @@
-// ── APP — init, select logic, module wiring ──────────────
+// ── APP - init, select logic, module wiring ──────────────
 import { isMobile, formatDate } from './config.js';
 import {
   selectedId, setSelectedId, allBillboards, filtered,
@@ -148,7 +148,7 @@ document.addEventListener('keydown', e => {
 // Content loads on page open and on an explicit refresh. There is no
 // background polling: the dataset changes a few times a month, so a 30s poll
 // was ~2,880 requests a day per open tab to learn nothing.
-// No UI entry point any more — the header button and hamburger item were
+// No UI entry point any more - the header button and hamburger item were
 // removed, and reloading the page is the refresh path. Kept on `window` so a
 // control can be restored (or it can be called from the console) without
 // rewiring anything. Guards on the button are null-safe by design.

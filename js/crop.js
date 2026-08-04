@@ -1,7 +1,7 @@
-// ── CROP — content-aware billboard framing for thumbnails ──
+// ── CROP - content-aware billboard framing for thumbnails ──
 //
 // Why this exists: thumbnails used `object-fit: contain`, which letterboxes a
-// whole driving photo into a 96×64 box — the billboard ends up a few pixels
+// whole driving photo into a 96×64 box - the billboard ends up a few pixels
 // tall while the A-pillar and dashboard dominate.
 //
 // Why not generic saliency: off-the-shelf saliency crops chase raw edge energy,
@@ -10,7 +10,7 @@
 // failure modes were measured before this was written.
 //
 // The scoring here is billboard-specific on three axes:
-//   1. sky and dark pixels are excluded from "interest" — sky is the background
+//   1. sky and dark pixels are excluded from "interest" - sky is the background
 //      a billboard sits against, and dark is car interior / asphalt.
 //   2. a containment term compares interest inside the window against a band
 //      just outside it. A window slicing through a board leaves the remainder
@@ -39,7 +39,7 @@ const RING         = 0.14;
 const RING_W       = 1.0;
 // Asphalt, guardrails and concrete are grey; their edge energy was competing
 // with the billboard on equal terms, which is how crops ended up full of road.
-// Weighting edge energy by chroma fixes that — but overdo it and the score
+// Weighting edge energy by chroma fixes that - but overdo it and the score
 // dives into colourful artwork *inside* a board and loses the text. At floor
 // 0.35 that regression was visible (a Framer board lost its headline to a
 // graphic); 0.65 keeps the road fix without it. Touches 5 of 91 crops.
@@ -63,7 +63,7 @@ function persist() {
   clearTimeout(_flushTimer);
   _flushTimer = setTimeout(() => {
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(_cache)); }
-    catch { /* quota or private mode — crops just recompute next visit */ }
+    catch { /* quota or private mode - crops just recompute next visit */ }
   }, 400);
 }
 export function clearCropCache() {
@@ -98,7 +98,7 @@ function analyze(imgEl) {
 
   let px;
   try { px = ctx.getImageData(0, 0, W, H).data; }
-  catch { return null; }   // canvas tainted — caller falls back
+  catch { return null; }   // canvas tainted - caller falls back
 
   const n = W * H;
   const lum = new Float32Array(n);
@@ -174,7 +174,7 @@ export function computeCrop(imgEl, targetAspect) {
            pos * Math.pow(scale, 0.5);
   }
 
-  // BASELINE — widest window at the target aspect, best placement.
+  // BASELINE - widest window at the target aspect, best placement.
   //
   // This is both the "reposition, don't zoom" answer and the reference the zoom
   // guard is measured against. Using a *centred* window here was a bug, caught
@@ -226,7 +226,7 @@ export function computeCrop(imgEl, targetAspect) {
 // the rect is built at the container's aspect ratio, width and height scale by
 // the same factor, so nothing is distorted.
 function applyCrop(imgEl, c) {
-  if (!c) {   // analysis unavailable — plain cover, positioned by the stylesheet
+  if (!c) {   // analysis unavailable - plain cover, positioned by the stylesheet
     imgEl.style.cssText += ';position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
     return;
   }
@@ -257,7 +257,7 @@ export function boxFromRecord(cropBox) {
 /**
  * Frame a thumbnail image inside its container.
  *
- * If the record carries a `crop_box` the app chose, that wins outright — it is
+ * If the record carries a `crop_box` the app chose, that wins outright - it is
  * ground truth from the person who took the photo, not an inference. The pixel
  * heuristic exists for the rows published before that column existed.
  *
@@ -273,25 +273,35 @@ export function smartFrame(imgEl, url, targetAspect, cropBox) {
 
   if (c[key]) { applyCrop(imgEl, c[key]); return; }
 
-  // Neutral default until the real crop is known — avoids a visible jump.
+  // Neutral default until the real crop is known - avoids a visible jump.
   imgEl.style.cssText += ';position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
 
   const run = () => {
     // Analyse a separate CORS-enabled copy. The displayed <img> is never given
     // crossOrigin, so if CORS is missing the picture still renders normally.
+    //
+    // The `cors=1` param is not decoration. WebKit (Safari, and Chromium-based
+    // browsers to a lesser degree) keys its image cache on the URL without
+    // varying on CORS mode. The plain <img> above has usually already fetched
+    // this exact URL without CORS, so a crossOrigin request for the same URL
+    // can be served that cached, opaque response - which taints the canvas and
+    // drops us to the `cover` fallback. It only bites images that happen to be
+    // cached already, which is why it shows up as *some* billboards looking
+    // uncropped rather than all of them. A distinct URL forces a separate,
+    // properly CORS-flagged cache entry. Supabase ignores unknown params.
     const probe = new Image();
     probe.crossOrigin = 'anonymous';
     probe.onload = () => {
       const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1));
       idle(() => {
         const res = computeCrop(probe, targetAspect);
-        if (!res) return;                 // tainted canvas — keep cover
+        if (!res) return;                 // tainted canvas - keep cover
         c[key] = res; persist();
         applyCrop(imgEl, res);
       });
     };
     probe.onerror = () => { /* keep cover */ };
-    probe.src = url;
+    probe.src = url + (url.includes('?') ? '&' : '?') + 'cors=1';
   };
 
   if (imgEl.complete && imgEl.naturalWidth) run();

@@ -1,47 +1,26 @@
-// ── STATS — corpus overview, brand intelligence, capture deltas ─────────
+// ── STATS - corpus overview, brand intelligence, capture deltas ─────────
 //
 // Ranking here is an honesty problem, not a layout one.
 //
 // This dataset is a convenience sample, not a census: it records what was
 // photographed on the drives that happened, not what stands on the 101. So:
 //
-//   PRIMARY    — whole-corpus totals. Every capture contributes.
-//   SECONDARY  — patterns across the whole corpus. Ratios over a large base.
-//   TERTIARY   — the latest drive: small, muted, explicitly not comparable.
+//   PRIMARY    - whole-corpus totals. Every capture contributes.
+//   SECONDARY  - patterns across the whole corpus. Ratios over a large base.
+//   TERTIARY   - the latest drive: small, muted, explicitly not comparable.
 //
 // On distance: the corridor length is a stated constant (config.CORRIDOR), not
 // something computed from billboard coordinates. Billboard positions measure
-// where signs stand, not how far anyone drove — a drive yielding one billboard
+// where signs stand, not how far anyone drove - a drive yielding one billboard
 // would compute as 0 miles even if it ran the whole corridor. This module
 // therefore makes NO per-drive distance claim at all, because the data simply
 // doesn't contain it. Counts are presented as descriptions of a drive, never as
 // a trend.
 
-import { catColor, CORRIDOR, drivenMiles } from './config.js';
+import { catColor, CORRIDOR, drivenMiles, dayKeyOf } from './config.js';
 import { allBillboards } from './data.js';
 
-/**
- * Bucket a capture into a drive-day, in PACIFIC time.
- *
- * `captured_at` comes back as UTC, and slicing the ISO string buckets by UTC
- * date. That silently splits a single evening drive in two: rush hour here is
- * ~16:00–19:00 PT, which is 23:00–02:00 UTC, so anything captured after 17:00 PT
- * rolls over into the next UTC day.
- *
- * Today's data doesn't trip it — the latest capture is 16:14 PT, 46 minutes
- * short of the boundary, and all 91 rows agree under both zones. But one drive
- * that runs slightly later would inflate the drive count and mis-date "Latest
- * drive". Bucketing in the timezone the driving actually happens in is the
- * correct rule regardless.
- *
- * 'en-CA' is used purely because it formats as YYYY-MM-DD, which sorts.
- */
-const dayKey = iso => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return String(iso).slice(0, 10);
-  return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-};
+const dayKey = dayKeyOf;   // shared Pacific bucketing, see config.js
 
 /** Capture sessions, oldest first. A session is one day of driving. */
 function sessions() {
@@ -118,7 +97,7 @@ export function renderStatsPanel() {
 
   let html = '';
 
-  // ── PRIMARY — the whole corpus ─────────────────────────
+  // ── PRIMARY - the whole corpus ─────────────────────────
   html += `<div class="stats-section">
     <div class="stats-section-title">The collection</div>
     <div class="kpi-grid">
@@ -132,7 +111,7 @@ export function renderStatsPanel() {
       drive${sess.length !== 1 ? 's' : ''}, ${fmtDay(sess[0].day)} to ${fmtDay(latest.day)}.</div>
   </div>`;
 
-  // ── PRIMARY — brands ───────────────────────────────────
+  // ── PRIMARY - brands ───────────────────────────────────
   if (brands.length) {
     html += `<div class="stats-section"><div class="stats-section-title">Top brands by ad count</div>`;
     brands.slice(0, 8).forEach(([name, count]) => {
@@ -156,7 +135,7 @@ export function renderStatsPanel() {
     html += `</div>`;
   }
 
-  // ── PRIMARY — categories ───────────────────────────────
+  // ── PRIMARY - categories ───────────────────────────────
   html += `<div class="stats-section"><div class="stats-section-title">By category</div>`;
   cats.forEach(([cat, count]) => {
     html += `<div class="cat-stat-row">
@@ -167,11 +146,11 @@ export function renderStatsPanel() {
   });
   html += `</div>`;
 
-  // ── SECONDARY — patterns across the whole corpus ───────
+  // ── SECONDARY - patterns across the whole corpus ───────
   html += `<div class="stats-section"><div class="stats-section-title">Patterns</div>`;
   if (aiPct > 0) {
     html += `<div class="fun-fact">🤖 <strong>${aiPct}%</strong> of every billboard here is AI &amp; Tech
-      &mdash; Highway 101 is basically a startup runway.</div>`;
+      - Highway 101 is basically a startup runway.</div>`;
   }
   if (brands[0]) {
     html += `<div class="fun-fact">🏆 <strong>${esc(brands[0][0])}</strong> has the largest presence,
@@ -181,43 +160,15 @@ export function renderStatsPanel() {
     html += `<div class="fun-fact">🎯 <strong>${oncePct}%</strong> of brands (${once} of ${brands.length})
       appear exactly once. Only <strong>${repeat}</strong> run more than one board at a time.</div>`;
   }
-  // Density divides by the corridor length, not by distance driven — boards
+  // Density divides by the corridor length, not by distance driven - boards
   // facing north and south are different boards along the same stretch.
   html += `<div class="fun-fact">📍 That's about <strong>${(total / corridorMi).toFixed(1)} billboards
     per mile</strong> of corridor, counting both sides of the road.</div>`;
   html += `</div>`;
 
-  // ── TERTIARY — the latest drive ────────────────────────
-  //
-  // No distance figure, deliberately. How far a given drive went isn't
-  // recorded anywhere in this data, and inferring it from billboard spread
-  // would be inventing a number. Counts stay, framed as descriptions.
-  const lRows = latest.rows;
-  const lNewBrands = [...new Set(lRows.map(b => b.company_name).filter(Boolean))]
-    .filter(n => brandFirst[n] === latest.day);
-  const prev = sess.length > 1 ? sess[sess.length - 2] : null;
-
-  html += `<div class="stats-section tertiary">
-    <div class="stats-section-title">Latest drive &mdash; ${fmtDay(latest.day)}</div>
-    <div class="delta-row"><span class="delta-num">${lRows.length}</span>
-      <span class="delta-lbl">board${lRows.length !== 1 ? 's' : ''} added</span></div>`;
-
-  if (lNewBrands.length) {
-    html += `<div class="delta-row"><span class="delta-num">${lNewBrands.length}</span>
-      <span class="delta-lbl">brand${lNewBrands.length !== 1 ? 's' : ''} seen here for the first time:
-      ${lNewBrands.slice(0, 5).map(esc).join(', ')}${lNewBrands.length > 5 ? '…' : ''}</span></div>`;
-  }
-
-  if (prev) {
-    html += `<div class="delta-row"><span class="delta-num">${prev.rows.length}</span>
-      <span class="delta-lbl">on the previous drive, ${fmtDay(prev.day)}</span></div>`;
-  }
-
-  html += `<div class="stats-caveat">Not a like-for-like comparison. Each drive covers a different
-    part of the corridor, and how many boards it yields depends on how far it went &mdash; which
-    isn't recorded here. These counts describe the drives, not changes in the billboards.
-    The totals above are the real picture.</div>`;
-  html += `</div>`;
+  // The per-drive "Latest drive" block was removed. Session counts on their own
+  // invite a trend reading the data can't support, and the caveat needed to make
+  // them honest was longer than the numbers were worth.
 
   body.innerHTML = html;
 }

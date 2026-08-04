@@ -1,4 +1,4 @@
-// ── UI — lightbox, about, hamburger, pills, search, time chips ──
+// ── UI - lightbox, about, hamburger, pills, search, time chips ──
 import { MAX_PILLS, catColor, catStyle } from './config.js';
 import {
   allBillboards, filtered, activeFilter, activeTimeSlice,
@@ -203,7 +203,7 @@ export async function submitContact() {
   } catch {
     btn.disabled = false;
     btn.textContent = 'Send →';
-    alert('Could not send — please try again or reach out on X.');
+    alert('Could not send - please try again or reach out on X.');
   }
 }
 

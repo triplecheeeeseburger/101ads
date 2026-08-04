@@ -14,13 +14,13 @@ export const MAX_PILLS = 5;
 // every time a board is added.
 //
 // Current value: endpoint to endpoint, Palo Alto (37.4567, -122.1346) to
-// San Francisco (37.7855, -122.3918) — 26.7 miles straight line, ~36 by road.
+// San Francisco (37.7855, -122.3918) - 26.7 miles straight line, ~36 by road.
 //
 // UPDATE THIS when the corridor is extended further along the highway. It is
 // the sector length, so it only changes when the sector does.
 // Two distinct quantities, deliberately kept apart:
-//   oneWayMiles — the length of the corridor itself.
-//   directions  — driven northbound and southbound, so distance covered is 2x.
+//   oneWayMiles - the length of the corridor itself.
+//   directions  - driven northbound and southbound, so distance covered is 2x.
 // Billboard density must divide by oneWayMiles, not by distance driven:
 // boards facing each direction are different boards along the SAME stretch, so
 // dividing by 72 would halve the real density.
@@ -31,10 +31,10 @@ export const CORRIDOR = {
   to: 'San Francisco',
 };
 
-/** Total road distance covered — both directions of the corridor. */
+/** Total road distance covered - both directions of the corridor. */
 export const drivenMiles = () => CORRIDOR.oneWayMiles * CORRIDOR.directions;
 
-// Derive logo from company_url — DB column is null for existing rows.
+// Derive logo from company_url - DB column is null for existing rows.
 // Uses Google's favicon service (reliable, no auth, no CORS issues).
 export function logoUrl(b) {
   const url = b.company_url || (b.company_logo_url && !b.company_logo_url.includes('clearbit') ? b.company_logo_url : null);
@@ -44,6 +44,32 @@ export function logoUrl(b) {
     const hostname = new URL(raw.startsWith('http') ? raw : 'https://' + raw).hostname;
     return `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
   } catch { return null; }
+}
+
+// ── TIME BUCKETING ───────────────────────────────────────
+// Every "which day / which month was this captured" question resolves in
+// Pacific time, because that is where the driving happens.
+//
+// Two bugs this avoids. First, captured_at is stored UTC, so slicing the ISO
+// string buckets by UTC date: rush hour here is roughly 16:00-19:00 PT, which
+// is 23:00-02:00 UTC, so a drive running past 17:00 PT would land on the next
+// day. Second, using the visitor's local timezone instead means a reader in
+// Tokyo and a reader in San Francisco can see the same billboard filed under
+// different months. Pinning to one zone makes the site agree with itself
+// everywhere.
+export const PROJECT_TZ = 'America/Los_Angeles';
+
+// 'en-CA' purely because it formats as YYYY-MM-DD, which sorts lexically.
+export function dayKeyOf(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso).slice(0, 10);
+  return d.toLocaleDateString('en-CA', { timeZone: PROJECT_TZ });
+}
+
+export function monthKeyOf(iso) {
+  const k = dayKeyOf(iso);
+  return k ? k.slice(0, 7) : '';
 }
 
 // ── COLORS ───────────────────────────────────────────────

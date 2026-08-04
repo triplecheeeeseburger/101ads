@@ -1,5 +1,5 @@
-// ── DATA — state, fetch, sync, filter ────────────────────
-import { SUPABASE_URL, SUPABASE_KEY, normalizeBillboard } from './config.js';
+// ── DATA - state, fetch, sync, filter ────────────────────
+import { SUPABASE_URL, SUPABASE_KEY, normalizeBillboard, monthKeyOf } from './config.js';
 
 // ── STATE ────────────────────────────────────────────────
 export let allBillboards = [];
@@ -12,7 +12,7 @@ export let activeTimeSlice = 'latest'; // 'latest' or 'YYYY-MM'
 let lastFetchedAt = null;
 let initialLoadDone = false;
 
-// Callbacks — set by app.js after all modules load
+// Callbacks - set by app.js after all modules load
 let onDataReady = null;
 let onSyncUpdate = null;
 
@@ -95,12 +95,13 @@ export function applyFilters() {
       (b.address || '').toLowerCase().includes(searchQuery) ||
       (b.company_name || '').toLowerCase().includes(searchQuery) ||
       (b.company_url || '').toLowerCase().includes(searchQuery);
-    // Time-slice filter: cumulative — show everything captured up to end of selected month
+    // Time-slice filter: EXCLUSIVE. A month chip shows only the billboards
+    // captured in that month. This used to be cumulative (everything up to the
+    // end of the month), which made every chip except the first look like it
+    // contained the whole archive.
     let matchTime = true;
-    if (activeTimeSlice !== 'latest' && b.captured_at) {
-      const [y, m] = activeTimeSlice.split('-').map(Number);
-      const endOfMonth = new Date(y, m, 0, 23, 59, 59, 999); // last ms of that month
-      matchTime = new Date(b.captured_at) <= endOfMonth;
+    if (activeTimeSlice !== 'latest') {
+      matchTime = monthKeyOf(b.captured_at) === activeTimeSlice;
     }
     return matchCat && matchSearch && matchTime;
   });
@@ -111,11 +112,8 @@ export function applyFilters() {
 export function getAvailableMonths() {
   const months = new Set();
   allBillboards.forEach(b => {
-    if (b.captured_at) {
-      const d = new Date(b.captured_at);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      months.add(key);
-    }
+    const k = monthKeyOf(b.captured_at);
+    if (k) months.add(k);
   });
   return Array.from(months).sort();
 }
@@ -128,9 +126,7 @@ export function formatMonthLabel(ym) {
   return `${mon} '${String(y).slice(2)}`;
 }
 
-// Count billboards visible at a given time slice (cumulative)
+/** How many billboards belong to this month. Exclusive, not cumulative. */
 export function countAtSlice(ym) {
-  const [y, m] = ym.split('-').map(Number);
-  const endOfMonth = new Date(y, m, 0, 23, 59, 59, 999);
-  return allBillboards.filter(b => b.captured_at && new Date(b.captured_at) <= endOfMonth).length;
+  return allBillboards.filter(b => monthKeyOf(b.captured_at) === ym).length;
 }

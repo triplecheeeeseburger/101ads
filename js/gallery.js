@@ -1,4 +1,4 @@
-// ── GALLERY — desktop gallery + detail panel ─────────────
+// ── GALLERY - desktop gallery + detail panel ─────────────
 import { logoUrl, catStyle, catColor, formatDate } from './config.js';
 import { filtered, selectedId, allBillboards } from './data.js';
 import { openLightbox } from './ui.js';

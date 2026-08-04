@@ -1,4 +1,4 @@
-// ── MOBILE — bottom sheet, cards, drag ───────────────────
+// ── MOBILE - bottom sheet, cards, drag ───────────────────
 import { logoUrl, catStyle, formatDate } from './config.js';
 import { filtered, selectedId } from './data.js';
 import { openLightbox } from './ui.js';
