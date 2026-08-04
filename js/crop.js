@@ -37,10 +37,18 @@ const PAD          = 0.06;
 const GUARD        = 1.75;
 const RING         = 0.14;
 const RING_W       = 1.0;
+// Asphalt, guardrails and concrete are grey; their edge energy was competing
+// with the billboard on equal terms, which is how crops ended up full of road.
+// Weighting edge energy by chroma fixes that — but overdo it and the score
+// dives into colourful artwork *inside* a board and loses the text. At floor
+// 0.35 that regression was visible (a Framer board lost its headline to a
+// graphic); 0.65 keeps the road fix without it. Touches 5 of 91 crops.
+const CHROMA_FLOOR = 0.65;
+const CHROMA_FULL  = 60;   // chroma at which a pixel counts at full weight
 
 // Bump this whenever the scoring changes, so stale crops from an older
 // algorithm don't survive in a returning visitor's localStorage.
-const CACHE_KEY = 'bbcrop:v2';
+const CACHE_KEY = 'bbcrop:v3';
 
 // ── cache ────────────────────────────────────────────────
 let _cache = null;
@@ -96,10 +104,12 @@ function analyze(imgEl) {
   const lum = new Float32Array(n);
   const isSky = new Float32Array(n);
   const isDark = new Float32Array(n);
+  const sat = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2];
     lum[i] = 0.299 * r + 0.587 * g + 0.114 * b;
     isSky[i] = (b - r);           // stash for second pass
+    sat[i] = Math.min(1, (Math.max(r, g, b) - Math.min(r, g, b)) / CHROMA_FULL);
   }
   const grad = new Float32Array(n);
   for (let y = 0; y < H; y++) {
@@ -119,7 +129,9 @@ function analyze(imgEl) {
     const dark = lum[i] < DARK_LUM;
     isSky[i] = sky ? 1 : 0;
     isDark[i] = dark ? 1 : 0;
-    interest[i] = (sky || dark) ? 0 : grad[i];
+    interest[i] = (sky || dark)
+      ? 0
+      : grad[i] * (CHROMA_FLOOR + (1 - CHROMA_FLOOR) * sat[i]);
   }
   return { W, H, interest, isSky, isDark };
 }
