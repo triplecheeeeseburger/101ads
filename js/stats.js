@@ -20,7 +20,28 @@
 import { catColor, CORRIDOR, drivenMiles } from './config.js';
 import { allBillboards } from './data.js';
 
-const dayKey = iso => (iso || '').slice(0, 10);
+/**
+ * Bucket a capture into a drive-day, in PACIFIC time.
+ *
+ * `captured_at` comes back as UTC, and slicing the ISO string buckets by UTC
+ * date. That silently splits a single evening drive in two: rush hour here is
+ * ~16:00–19:00 PT, which is 23:00–02:00 UTC, so anything captured after 17:00 PT
+ * rolls over into the next UTC day.
+ *
+ * Today's data doesn't trip it — the latest capture is 16:14 PT, 46 minutes
+ * short of the boundary, and all 91 rows agree under both zones. But one drive
+ * that runs slightly later would inflate the drive count and mis-date "Latest
+ * drive". Bucketing in the timezone the driving actually happens in is the
+ * correct rule regardless.
+ *
+ * 'en-CA' is used purely because it formats as YYYY-MM-DD, which sorts.
+ */
+const dayKey = iso => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso).slice(0, 10);
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+};
 
 /** Capture sessions, oldest first. A session is one day of driving. */
 function sessions() {

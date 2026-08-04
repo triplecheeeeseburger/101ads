@@ -130,31 +130,9 @@
   }
   .about-btn:hover { border-color: var(--text); color: var(--text); background: var(--surface2); }
 
-  /* Manual refresh — replaces the old 30s background poll */
-  .refresh-btn {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text2);
-    cursor: pointer;
-    transition: all 0.15s;
-    flex-shrink: 0;
-    padding: 0;
-  }
-  .refresh-btn:hover { border-color: var(--text); color: var(--text); background: var(--surface2); }
-  .refresh-btn svg { display: block; transition: transform 0.2s; }
-  .refresh-btn.spinning { pointer-events: none; color: var(--accent); border-color: var(--accent); }
-  .refresh-btn.spinning svg { animation: refresh-spin 0.7s linear infinite; }
-  @keyframes refresh-spin { to { transform: rotate(360deg); } }
-
-  @media (prefers-reduced-motion: reduce) {
-    .refresh-btn.spinning svg { animation: none; opacity: 0.5; }
-  }
+  /* The refresh button was removed from the header — reloading the page is the
+     refresh path. `window.doRefresh()` still exists in app.js if a control is
+     ever wanted back. */
 
   /* Hamburger — hidden on desktop, shown on mobile */
   .hamburger-btn {
@@ -1226,7 +1204,7 @@
     }
 
     .logo-sub, .header-stats { display: none; }
-    .header-pill-btn, .about-btn, .refresh-btn { display: none; }
+    .header-pill-btn, .about-btn { display: none; }
     .hamburger-btn { display: flex; }
 
     .filter-pills {
