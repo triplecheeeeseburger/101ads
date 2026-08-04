@@ -29,7 +29,7 @@ export function renderGallery() {
       const img = document.createElement('img');
       img.src = b.image_url; img.alt = ''; img.loading = 'lazy';
       imgDiv.appendChild(img);
-      observeFrame(img, b.image_url, CARD_ASPECT);
+      observeFrame(img, b.image_url, CARD_ASPECT, b.crop_box);
       const hint = document.createElement('div');
       hint.className = 'zoom-hint'; hint.textContent = '⤢';
       imgDiv.appendChild(hint);

@@ -228,11 +228,34 @@ function applyCrop(imgEl, c) {
 }
 
 /**
+ * Convert a stored `crop_box` into the shape applyCrop wants.
+ * Returns null if absent or malformed, so callers fall through to the
+ * heuristic rather than rendering something wrong.
+ */
+export function boxFromRecord(cropBox) {
+  if (!cropBox) return null;
+  let b = cropBox;
+  if (typeof b === 'string') { try { b = JSON.parse(b); } catch { return null; } }
+  const { x, y, w, h } = b || {};
+  if (![x, y, w, h].every(v => typeof v === 'number' && isFinite(v))) return null;
+  if (w <= 0 || h <= 0 || x < 0 || y < 0 || x + w > 1.001 || y + h > 1.001) return null;
+  return { x, y, w, h, cropped: true, zoomed: true, exact: true };
+}
+
+/**
  * Frame a thumbnail image inside its container.
+ *
+ * If the record carries a `crop_box` the app chose, that wins outright — it is
+ * ground truth from the person who took the photo, not an inference. The pixel
+ * heuristic exists for the rows published before that column existed.
+ *
  * Safe by construction: any failure (CORS taint, decode error, no canvas)
  * leaves a plain `object-fit: cover`, which is still better than `contain`.
  */
-export function smartFrame(imgEl, url, targetAspect) {
+export function smartFrame(imgEl, url, targetAspect, cropBox) {
+  const exact = boxFromRecord(cropBox);
+  if (exact) { applyCrop(imgEl, exact); return; }
+
   const key = `${url}|${targetAspect.toFixed(3)}`;
   const c = cache();
 
@@ -264,7 +287,10 @@ export function smartFrame(imgEl, url, targetAspect) {
 }
 
 /** Only frame thumbnails once they're near the viewport. */
-export function observeFrame(imgEl, url, targetAspect) {
+export function observeFrame(imgEl, url, targetAspect, cropBox) {
+  // An exact box needs no pixel work, so apply it immediately rather than
+  // waiting for the element to scroll into range.
+  if (boxFromRecord(cropBox)) { smartFrame(imgEl, url, targetAspect, cropBox); return; }
   if (!('IntersectionObserver' in window)) { smartFrame(imgEl, url, targetAspect); return; }
   const io = new IntersectionObserver(entries => {
     for (const e of entries) {

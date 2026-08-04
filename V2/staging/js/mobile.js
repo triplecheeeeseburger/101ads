@@ -35,7 +35,7 @@ export function renderMobileSheet() {
       const img = document.createElement('img');
       img.src = b.image_url; img.alt = ''; img.loading = 'lazy';
       imgDiv.appendChild(img);
-      observeFrame(img, b.image_url, MOBILE_ASPECT);
+      observeFrame(img, b.image_url, MOBILE_ASPECT, b.crop_box);
       imgDiv.style.cursor = 'zoom-in';
       imgDiv.addEventListener('click', e => { e.stopPropagation(); openLightbox(b.image_url); });
     } else {
