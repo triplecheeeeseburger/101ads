@@ -106,10 +106,9 @@ export function renderStatsPanel() {
       <div class="kpi"><div class="kpi-num">${cats.length}</div><div class="kpi-lbl">categories</div></div>
       <div class="kpi"><div class="kpi-num">${drivenMi}</div><div class="kpi-lbl">miles driven</div></div>
     </div>
-    <div class="kpi-sub">A ${corridorMi}-mile stretch of the 101 between ${esc(CORRIDOR.from)}
-      and ${esc(CORRIDOR.to)}, driven in both directions &mdash; ${drivenMi} miles of road in all.
-      Mapped over ${sess.length} drive${sess.length !== 1 ? 's' : ''},
-      ${fmtDay(sess[0].day)} to ${fmtDay(latest.day)}.</div>
+    <div class="kpi-sub">A ${corridorMi}-mile stretch of 101 HWY between ${esc(CORRIDOR.from)}
+      and ${esc(CORRIDOR.to)}, driven in both directions. Mapped over ${sess.length}
+      drive${sess.length !== 1 ? 's' : ''}, ${fmtDay(sess[0].day)} to ${fmtDay(latest.day)}.</div>
   </div>`;
 
   // ── PRIMARY — brands ───────────────────────────────────
