@@ -2,6 +2,10 @@
 import { logoUrl, catStyle, formatDate } from './config.js';
 import { filtered, selectedId } from './data.js';
 import { openLightbox } from './ui.js';
+import { observeFrame } from './crop.js';
+
+// Must match .mobile-card-img in style.css (56 × 42)
+const MOBILE_ASPECT = 56 / 42;
 
 let selectHandler = null;
 export function setSelectHandler(fn) { selectHandler = fn; }
@@ -31,6 +35,7 @@ export function renderMobileSheet() {
       const img = document.createElement('img');
       img.src = b.image_url; img.alt = ''; img.loading = 'lazy';
       imgDiv.appendChild(img);
+      observeFrame(img, b.image_url, MOBILE_ASPECT);
       imgDiv.style.cursor = 'zoom-in';
       imgDiv.addEventListener('click', e => { e.stopPropagation(); openLightbox(b.image_url); });
     } else {

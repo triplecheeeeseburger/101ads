@@ -49,32 +49,40 @@ export async function initialFetch() {
   }
 }
 
-export async function syncNewBillboards() {
-  if (!initialLoadDone) return;
+/**
+ * Manual refresh. Full re-fetch, not an incremental one.
+ *
+ * The previous 30s poll asked for rows with `captured_at > lastFetchedAt`.
+ * That silently never worked for backfilled photos: `captured_at` is when the
+ * picture was *taken*, not when it was published, so a billboard shot in March
+ * and published today arrives with a timestamp far below the watermark and was
+ * filtered straight out. There is no inserted-at column to key on, so a full
+ * re-fetch is the only correct answer until one exists.
+ *
+ * Returns the number of newly seen billboards.
+ */
+export async function refreshBillboards() {
+  if (!initialLoadDone) return 0;
+  const before = new Set(allBillboards.map(b => b.id));
   try {
-    const since = lastFetchedAt
-      ? `&captured_at=gt.${encodeURIComponent(lastFetchedAt)}`
-      : '';
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/billboards?order=captured_at.desc&limit=50${since}`,
+      `${SUPABASE_URL}/rest/v1/billboards?order=captured_at.desc&limit=500`,
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
-    const newRows = await res.json();
-    if (!Array.isArray(newRows) || newRows.length === 0) return;
+    const rows = await res.json();
+    if (!Array.isArray(rows)) throw new Error('bad payload');
 
-    const existingIds = new Set(allBillboards.map(b => b.id));
-    const truly_new = newRows.filter(b => !existingIds.has(b.id)).map(normalizeBillboard);
-    if (truly_new.length === 0) return;
-
-    allBillboards = [...truly_new, ...allBillboards];
-
-    lastFetchedAt = newRows.reduce((max, b) =>
-      b.captured_at > max ? b.captured_at : max, lastFetchedAt || newRows[0].captured_at);
-
+    allBillboards = rows.map(normalizeBillboard);
+    if (rows.length > 0) {
+      lastFetchedAt = rows.reduce((max, b) =>
+        b.captured_at > max ? b.captured_at : max, rows[0].captured_at);
+    }
+    const added = allBillboards.filter(b => !before.has(b.id)).length;
     if (onSyncUpdate) onSyncUpdate();
-    console.log(`Synced ${truly_new.length} new billboard(s)`);
+    return added;
   } catch (e) {
-    console.warn('Incremental sync failed:', e);
+    console.warn('Refresh failed:', e);
+    throw e;
   }
 }
 

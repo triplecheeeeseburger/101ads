@@ -2,7 +2,7 @@
 import { isMobile, formatDate } from './config.js';
 import {
   selectedId, setSelectedId, allBillboards, filtered,
-  initialFetch, syncNewBillboards, applyFilters, setCallbacks
+  initialFetch, refreshBillboards, applyFilters, setCallbacks
 } from './data.js';
 import { leafMap, renderMarkers, setSelectHandler as setMapSelect } from './map.js';
 import { renderGallery, renderDetailPanel, setSelectHandler as setGallerySelect } from './gallery.js';
@@ -144,9 +144,37 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeStats();
 });
 
-// Fetch data
+// ── REFRESH (manual only) ────────────────────────────────
+// Content loads on page open and on an explicit refresh. There is no
+// background polling: the dataset changes a few times a month, so a 30s poll
+// was ~2,880 requests a day per open tab to learn nothing.
+async function doRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  if (btn?.classList.contains('spinning')) return;
+  btn?.classList.add('spinning');
+  const badge = document.getElementById('mapBadge');
+  const prevBadge = badge?.textContent;
+  try {
+    const added = await refreshBillboards();
+    if (badge) {
+      badge.textContent = added > 0
+        ? `+${added} new billboard${added !== 1 ? 's' : ''}`
+        : 'Up to date';
+      setTimeout(() => updateBadge(), 2200);
+    }
+  } catch {
+    if (badge) {
+      badge.textContent = 'Refresh failed';
+      setTimeout(() => { badge.textContent = prevBadge; }, 2200);
+    }
+  } finally {
+    setTimeout(() => btn?.classList.remove('spinning'), 500);
+  }
+}
+window.doRefresh = doRefresh;
+
+// Fetch data on open
 initialFetch();
-setInterval(syncNewBillboards, 30000);
 
 // Resize
 window.addEventListener('resize', () => leafMap.invalidateSize());

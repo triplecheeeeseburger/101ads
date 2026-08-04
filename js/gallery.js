@@ -2,6 +2,10 @@
 import { logoUrl, catStyle, catColor, formatDate } from './config.js';
 import { filtered, selectedId, allBillboards } from './data.js';
 import { openLightbox } from './ui.js';
+import { observeFrame } from './crop.js';
+
+// Must match .card-img in style.css (96 × 64)
+const CARD_ASPECT = 96 / 64;
 
 let selectHandler = null;
 export function setSelectHandler(fn) { selectHandler = fn; }
@@ -25,6 +29,7 @@ export function renderGallery() {
       const img = document.createElement('img');
       img.src = b.image_url; img.alt = ''; img.loading = 'lazy';
       imgDiv.appendChild(img);
+      observeFrame(img, b.image_url, CARD_ASPECT);
       const hint = document.createElement('div');
       hint.className = 'zoom-hint'; hint.textContent = '⤢';
       imgDiv.appendChild(hint);
