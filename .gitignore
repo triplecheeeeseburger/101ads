@@ -48,3 +48,5 @@ node_modules/
 # ─── Local crop review harnesses (not site content) ───
 preview-crop.html
 preview-crop-standalone.html
+
+preview-stats.html
