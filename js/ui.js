@@ -229,41 +229,38 @@ export function initStatsFab() {
   const fab = document.getElementById('statsFab');
   const sheet = document.getElementById('mobileSheet');
   const chipBar = document.getElementById('timeChips');
-  const detail = document.getElementById('detailPanel');
   const isMobile = window.matchMedia('(max-width: 768px)');
   if (!sheet) return;
 
   // Write only when the value actually changes, so the MutationObserver
   // below can't ping-pong with our own style writes.
-  function setBottom(el, value) {
-    if (el && el.style.bottom !== value) el.style.bottom = value;
+  function setStyle(el, prop, value) {
+    if (el && el.style[prop] !== value) el.style[prop] = value;
   }
 
   function updatePositions() {
+    const chipsVisible = !!(chipBar && chipBar.style.display !== 'none');
     if (isMobile.matches) {
       // Mobile: chips ride just above the bottom sheet, FAB above the chips
       const sheetH = sheet.offsetHeight;
-      setBottom(chipBar, (sheetH + 6) + 'px');
-      const chipH = (chipBar && chipBar.style.display !== 'none') ? chipBar.offsetHeight + 6 : 0;
-      setBottom(fab, (sheetH + chipH + 12) + 'px');
+      setStyle(chipBar, 'bottom', (sheetH + 6) + 'px');
+      const chipH = chipsVisible ? chipBar.offsetHeight + 6 : 0;
+      setStyle(fab, 'bottom', (sheetH + chipH + 12) + 'px');
     } else {
-      // Desktop: the detail card is bottom-anchored over the map, so lift the
-      // chips above it while it is open instead of letting them sit on top.
-      const open = !!(detail && detail.classList.contains('open'));
-      const detailH = open ? detail.offsetHeight : 0;
-      setBottom(chipBar, (open ? detailH + 12 : 12) + 'px');
-      setBottom(fab, '');
+      // Desktop: chips stay parked at the bottom-left of the map. The detail
+      // card reserves matching space at its foot (--chip-inset) so the chips
+      // never sit on top of its content.
+      setStyle(chipBar, 'bottom', '12px');
+      setStyle(fab, 'bottom', '');
     }
+    const inset = (!isMobile.matches && chipsVisible) ? chipBar.offsetHeight + 24 : 0;
+    document.documentElement.style.setProperty('--chip-inset', inset + 'px');
   }
 
   const ro = new ResizeObserver(updatePositions);
   ro.observe(sheet);
-  if (detail) {
-    ro.observe(detail);
-    const dmo = new MutationObserver(updatePositions);
-    dmo.observe(detail, { attributes: true, attributeFilter: ['class'] });
-  }
   if (chipBar) {
+    ro.observe(chipBar);
     const mo = new MutationObserver(updatePositions);
     mo.observe(chipBar, { attributes: true, attributeFilter: ['style'] });
   }
