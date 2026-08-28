@@ -7,6 +7,11 @@ import { observeFrame } from './crop.js';
 // Must match .mobile-card-img in style.css (56 × 42)
 const MOBILE_ASPECT = 56 / 42;
 
+// Must match .mobile-expanded-img-wrap in style.css. Billboards are wide, so
+// the expanded frame is too - a 2:1 window crops to the board instead of
+// letterboxing a whole portrait driving photo into the card.
+const EXPANDED_ASPECT = 2 / 1;
+
 let selectHandler = null;
 export function setSelectHandler(fn) { selectHandler = fn; }
 
@@ -64,12 +69,17 @@ export function renderMobileSheet() {
     const expanded = document.createElement('div');
     expanded.className = 'mobile-card-expanded';
     if (b.image_url) {
+      // Needs a sized, positioned wrapper: applyCrop oversizes and offsets the
+      // image inside it, so without one there is nothing to crop against.
+      const wrap = document.createElement('div');
+      wrap.className = 'mobile-expanded-img-wrap';
       const img = document.createElement('img');
       img.className = 'mobile-expanded-img';
       img.src = b.image_url; img.alt = '';
-      img.style.cursor = 'zoom-in';
-      img.addEventListener('click', e => { e.stopPropagation(); openLightbox(b.image_url); });
-      expanded.appendChild(img);
+      wrap.appendChild(img);
+      observeFrame(img, b.image_url, EXPANDED_ASPECT, b.crop_box);
+      wrap.addEventListener('click', e => { e.stopPropagation(); openLightbox(b.image_url); });
+      expanded.appendChild(wrap);
     }
     const ocrDiv = document.createElement('div');
     ocrDiv.className = 'mobile-expanded-ocr';

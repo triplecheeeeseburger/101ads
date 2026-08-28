@@ -34,8 +34,25 @@ function selectBillboard(id) {
       if (chevron) chevron.style.transform = isThis ? 'rotate(90deg)' : '';
     });
     renderMarkers();
-    if (b?.latitude && b?.longitude) {
-      const sheet = document.getElementById('mobileSheet');
+
+    // Give the sheet room for one expanded card. At the default 36vh the
+    // expanded block overruns the list and its Close button sits below the
+    // fold. A sheet the reader has dragged fully open is left alone.
+    const sheet = document.getElementById('mobileSheet');
+    let sheetResizing = false;
+    if (sheet && !sheet.classList.contains('expanded')) {
+      const want = !!selectedId;
+      if (want !== sheet.classList.contains('detail')) {
+        sheet.classList.toggle('detail', want);
+        sheet.style.height = '';   // let the class drive it again after a drag
+        sheetResizing = true;
+      }
+    }
+
+    // The height animates, so offsetHeight is stale until it settles - reading
+    // it early would centre the marker behind the grown sheet.
+    const panToBillboard = () => {
+      if (!b?.latitude || !b?.longitude) return;
       const sheetH = sheet ? sheet.offsetHeight : 0;
       const mapH = leafMap.getSize().y;
       const visibleH = mapH - sheetH;
@@ -47,6 +64,15 @@ function selectBillboard(id) {
       const shifted = L.point(pt.x, pt.y + offsetPx);
       const newCenter = leafMap.containerPointToLatLng(shifted);
       leafMap.setView(newCenter, zoom, { animate: true });
+    };
+
+    if (sheetResizing) {
+      let panned = false;
+      const go = () => { if (panned) return; panned = true; leafMap.invalidateSize(); panToBillboard(); };
+      sheet.addEventListener('transitionend', e => { if (e.propertyName === 'height') go(); }, { once: true });
+      setTimeout(go, 420);   // transition is 350ms; fallback if it never fires
+    } else {
+      panToBillboard();
     }
     if (selectedId) {
       requestAnimationFrame(() => {

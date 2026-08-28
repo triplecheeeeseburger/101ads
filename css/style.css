@@ -1266,6 +1266,18 @@
       height: 88vh;
     }
 
+    /* Room for one expanded card. At the default 36vh the expanded block runs
+       past the bottom of the list and its Close button is unreachable without
+       hunting for it.
+       Sized in px, not vh: an expanded card is a fixed height (image frame +
+       text + button), so a vh that clears it on a tall phone still buries the
+       button on a short one. Capped at 88vh so a small screen degrades to the
+       fully-open sheet rather than overflowing. Very long OCR text can still
+       run past the fold; the list scrolls. */
+    .mobile-sheet.detail {
+      height: min(88vh, 480px);
+    }
+
     .mobile-sheet.collapsed {
       height: 72px;
     }
@@ -1434,14 +1446,27 @@
       display: block;
     }
 
+    /* The expanded image used to be `object-fit: contain` in a 200px-tall box,
+       which letterboxed a whole 3024x4032 driving photo - the billboard came
+       out as a small strip with empty space either side, and the block was
+       tall enough to push the Close button below the fold. It is now a fixed
+       2:1 window that the content-aware crop fills. */
+    .mobile-expanded-img-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 2 / 1;
+      margin: 10px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface2);
+      cursor: zoom-in;
+    }
+
     .mobile-expanded-img {
       width: 100%;
-      border-radius: 8px;
-      object-fit: contain;
+      height: 100%;
+      object-fit: cover;
       display: block;
-      margin: 10px 0 10px;
-      max-height: 200px;
-      cursor: zoom-in;
     }
 
     .mobile-expanded-ocr {
