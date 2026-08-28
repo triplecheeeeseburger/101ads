@@ -793,45 +793,6 @@
   }
   .card-company-name:hover { color: var(--accent); text-decoration: underline; }
 
-  /* DETAIL PANEL company block */
-  .detail-company {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 14px;
-    padding: 10px 12px;
-    background: var(--surface2);
-    border-radius: 8px;
-  }
-  .detail-company-logo {
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
-    object-fit: contain;
-    background: #fff;
-    padding: 3px;
-    flex-shrink: 0;
-    border: 1px solid var(--border);
-  }
-  .detail-company-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .detail-company-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text);
-    text-decoration: none;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .detail-company-name:hover { color: var(--accent); text-decoration: underline; }
-  .detail-company-url {
-    font-size: 11px;
-    color: var(--text3);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   /* EXPANDED CARD (mobile in-place expand) */
   .billboard-card.expanded .card-img {
     display: none;
@@ -999,71 +960,58 @@
   }
 
   /* DETAIL PANEL (desktop - slides up in map) */
-  .detail-panel {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    right: auto;
-    width: 500px;
+  /* ── MAP DETAIL BUBBLE (desktop) ──────────────────────
+     A Leaflet popup, restyled. It hangs off the billboard's own marker with a
+     tail pointing at it, so the card is tied to the place on the highway
+     instead of covering the lower half of the map from the bottom edge. */
+  .bb-popup .leaflet-popup-content-wrapper {
     background: var(--surface);
-    border-top: 1px solid var(--border-light);
-    border-radius: 14px 14px 0 0;
-    /* Foot padding clears the time chips, which float at the bottom-left */
-    padding: 48px 20px calc(20px + var(--chip-inset, 56px));
-    transform: translateX(-50%) translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
-    z-index: 400;
-    max-height: 65%;
-    overflow-y: auto;
-    box-shadow: 0 -6px 36px rgba(0,0,0,0.16);
-  }
-
-  .detail-panel.open { transform: translateX(-50%) translateY(0); }
-
-  .detail-close {
-    position: absolute;
-    top: 12px;
-    right: 16px;
-    background: var(--surface2);
-    border: 1px solid var(--border-light);
-    border-radius: 50%;
-    color: var(--text2);
-    cursor: pointer;
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s;
-    z-index: 10;
-  }
-
-  .detail-close:hover { background: var(--border); }
-
-  .detail-img-wrap {
-    position: relative;
-    margin-bottom: 14px;
-    cursor: zoom-in;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 12px 40px rgba(0,0,0,0.18);
+    padding: 0;
     overflow: hidden;
-    height: 220px;
   }
 
-  .detail-img {
+  .bb-popup .leaflet-popup-content {
+    margin: 0;
+    width: 320px !important;
+    line-height: 1.4;
+  }
+
+  /* Leaflet centres the tip container against its default 40px width using
+     margin-left:-20px. Narrowing the tail needs a matching half-width margin,
+     or it renders 8px left of the marker it is supposed to point at. */
+  .bb-popup .leaflet-popup-tip-container {
+    width: 24px;
+    height: 13px;
+    margin-left: -12px;
+  }
+
+  .bb-popup .leaflet-popup-tip {
+    background: var(--surface);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    width: 14px;
+    height: 14px;
+    margin: -8px auto 0;
+  }
+
+  .bb-img-wrap {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background: var(--surface2);
+    cursor: zoom-in;
+    overflow: hidden;
+  }
+
+  .bb-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center;
     display: block;
-    transition: transform 0.35s ease;
   }
 
-  .detail-img-wrap:hover .detail-img {
-    transform: scale(1.03);
-  }
-
-  .detail-img-zoom-hint {
+  .bb-img-zoom-hint {
     position: absolute;
     inset: 0;
     background: rgba(0,0,0,0.25);
@@ -1074,37 +1022,101 @@
     color: #fff;
     opacity: 0;
     transition: opacity 0.15s;
-    border-radius: var(--radius-sm);
     pointer-events: none;
   }
 
-  .detail-img-wrap:hover .detail-img-zoom-hint { opacity: 1; }
+  .bb-img-wrap:hover .bb-img-zoom-hint { opacity: 1; }
 
-  .detail-category {
+  .bb-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 2;
+  }
+
+  .bb-close:hover { background: rgba(0,0,0,0.7); }
+
+  .bb-cat {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    padding: 3px 8px;
+    padding: 4px 8px;
     border-radius: 5px;
-    display: inline-block;
+    color: #fff;
+  }
+
+  .bb-body { padding: 12px 14px 13px; }
+
+  .bb-company {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 8px;
+    min-width: 0;
   }
 
-  .detail-ocr {
-    font-size: 16px;
-    font-weight: 400;
-    line-height: 1.5;
-    letter-spacing: -0.2px;
-    margin-bottom: 12px;
+  .bb-company-logo {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    object-fit: contain;
+    background: #fff;
+    padding: 2px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .bb-company-name {
+    font-size: 13px;
+    font-weight: 600;
     color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .detail-coords {
+  .bb-company-name:hover { color: var(--accent); text-decoration: underline; }
+
+  .bb-ocr {
+    font-size: 15px;
+    line-height: 1.45;
+    letter-spacing: -0.2px;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .bb-meta {
     font-size: 11px;
     color: var(--text3);
-    line-height: 2;
-    font-weight: 400;
+    border-top: 1px solid var(--border-light);
+    padding-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .bb-meta span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* LIGHTBOX */
@@ -1447,7 +1459,8 @@
     }
 
     /* Hide desktop detail panel on mobile */
-    .detail-panel { display: none; }
+    /* Mobile keeps the bottom sheet; the map bubble is desktop-only. */
+    .bb-popup { display: none; }
     .logo-sub { display: none; }
     .app { position: relative; }
     .map-badge { display: none; }
