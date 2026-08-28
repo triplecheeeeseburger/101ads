@@ -4,7 +4,7 @@ import { filtered, selectedId } from './data.js';
 
 // ── INIT ─────────────────────────────────────────────────
 export const leafMap = L.map('map', { center: [37.55, -122.05], zoom: 11, zoomControl: false });
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2hr0_1_632140ccea23141a89ed7071', {
   attribution: '© OpenStreetMap, © CARTO', maxZoom: 19
 }).addTo(leafMap);
 L.control.zoom({ position: 'bottomright' }).addTo(leafMap);
