@@ -31,8 +31,30 @@ export const CORRIDOR = {
   to: 'San Francisco',
 };
 
-/** Total road distance covered - both directions of the corridor. */
-export const drivenMiles = () => CORRIDOR.oneWayMiles * CORRIDOR.directions;
+// ── DISTANCE DRIVEN ──────────────────────────────────────
+// Total road distance driven while capturing, as a deliberately rounded floor.
+//
+// This used to be oneWayMiles x directions (72), which is not distance driven
+// at all - it is the corridor measured twice. It ignored that the same stretch
+// gets driven again on every outing, and it could only ever change when the
+// sector did.
+//
+// Not derived, for the same reason the corridor is not: the photos record where
+// signs stand, not the route taken to reach them. Most of the driving leaves no
+// trace in the data - the runs south to San Jose, and any pass that happened to
+// yield no new boards.
+//
+// How the floor is reached: 11 distinct capture days, each at minimum one
+// corridor pass (36 mi) and usually a return trip (72), plus four or five Bay
+// Bridge to San Jose runs at roughly 96 miles return. Either component alone
+// approaches 500, so 500 is a conservative floor and not an estimate.
+//
+// Shown with a "+" because the true figure is unknown and only ever grows.
+// UPDATE this when it is clearly passed. Never round it up to flatter.
+export const MILES_DRIVEN_FLOOR = 500;
+
+/** Distance driven, as a display label - a floor, hence the "+". */
+export const drivenMilesLabel = () => `${MILES_DRIVEN_FLOOR}+`;
 
 // Derive logo from company_url - DB column is null for existing rows.
 // Uses Google's favicon service (reliable, no auth, no CORS issues).

@@ -14,10 +14,12 @@
 // where signs stand, not how far anyone drove - a drive yielding one billboard
 // would compute as 0 miles even if it ran the whole corridor. This module
 // therefore makes NO per-drive distance claim at all, because the data simply
-// doesn't contain it. Counts are presented as descriptions of a drive, never as
+// doesn't contain it. The one distance shown, "miles driven", is a stated floor
+// from config (MILES_DRIVEN_FLOOR), not anything computed from these rows.
+// Counts are presented as descriptions of a drive, never as
 // a trend.
 
-import { catColor, CORRIDOR, drivenMiles, dayKeyOf } from './config.js';
+import { catColor, CORRIDOR, drivenMilesLabel, dayKeyOf } from './config.js';
 import { allBillboards } from './data.js';
 
 const dayKey = dayKeyOf;   // shared Pacific bucketing, see config.js
@@ -88,7 +90,7 @@ export function renderStatsPanel() {
   const sess = sessions();
   const latest = sess[sess.length - 1];
   const corridorMi = CORRIDOR.oneWayMiles;   // for density
-  const drivenMi = drivenMiles();            // for "how much road was covered"
+  const drivenMi = drivenMilesLabel();       // stated floor, not derived
   const aiCount = allBillboards.filter(b => (b.category || '').includes('Tech')).length;
   const aiPct = Math.round(aiCount / total * 100);
   const once = brands.filter(([, n]) => n === 1).length;
@@ -107,8 +109,9 @@ export function renderStatsPanel() {
       <div class="kpi"><div class="kpi-num">${drivenMi}</div><div class="kpi-lbl">miles driven</div></div>
     </div>
     <div class="kpi-sub">A ${corridorMi}-mile stretch of 101 HWY between ${esc(CORRIDOR.from)}
-      and ${esc(CORRIDOR.to)}, driven in both directions. Mapped over ${sess.length}
-      drive${sess.length !== 1 ? 's' : ''}, ${fmtDay(sess[0].day)} to ${fmtDay(latest.day)}.</div>
+      and ${esc(CORRIDOR.to)}, driven in both directions and many times over. Mapped
+      across ${sess.length} drive${sess.length !== 1 ? 's' : ''}, ${fmtDay(sess[0].day)}
+      to ${fmtDay(latest.day)}.</div>
   </div>`;
 
   // ── PRIMARY - brands ───────────────────────────────────
