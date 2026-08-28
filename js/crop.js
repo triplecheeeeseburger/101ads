@@ -240,6 +240,39 @@ function applyCrop(imgEl, c) {
 }
 
 /**
+ * Reshape a stored crop box to the container it is being rendered into.
+ *
+ * A crop_box is stored in normalised image coordinates with one fixed shape,
+ * but applyCrop stretches the image with `object-fit: fill`. That only comes
+ * out undistorted where the container's aspect equals
+ * naturalAspect * (box.w / box.h) - one specific value, not any container.
+ *
+ * The boxes written so far are {w:0.86, h:0.43} on 3024x4032 photos, which
+ * works out to exactly 1.5: the 96x64 desktop card. That is why those rows
+ * look right on desktop and squashed by ~11% in the 56x42 mobile card, and
+ * stretched ~19% in the 320x180 map bubble.
+ *
+ * So reshape the box, never the image. Grow the short side around the box
+ * centre - never crop tighter than the person framing the shot chose - then
+ * clamp inside the image, shrinking the other side only if there is no room.
+ */
+function fitBoxToAspect(box, targetAspect, naturalAspect) {
+  const want = targetAspect / naturalAspect;   // required w/h, in box units
+  let { x, y, w, h } = box;
+  const cx = x + w / 2, cy = y + h / 2;
+
+  if (w / h > want) h = w / want; else w = h * want;
+
+  // Growing can push the box past the edges; scale back, keeping the ratio.
+  if (h > 1) { w *= 1 / h; h = 1; }
+  if (w > 1) { h *= 1 / w; w = 1; }
+
+  x = Math.min(Math.max(cx - w / 2, 0), 1 - w);
+  y = Math.min(Math.max(cy - h / 2, 0), 1 - h);
+  return { x, y, w, h, cropped: true, zoomed: true, exact: true };
+}
+
+/**
  * Convert a stored `crop_box` into the shape applyCrop wants.
  * Returns null if absent or malformed, so callers fall through to the
  * heuristic rather than rendering something wrong.
@@ -266,7 +299,20 @@ export function boxFromRecord(cropBox) {
  */
 export function smartFrame(imgEl, url, targetAspect, cropBox) {
   const exact = boxFromRecord(cropBox);
-  if (exact) { applyCrop(imgEl, exact); return; }
+  if (exact) {
+    // Reshaping needs the image's real proportions, so it has to wait for the
+    // decode. Until then the stylesheet's own `object-fit: cover` stands, which
+    // is a reasonable frame rather than a distorted one.
+    const fit = () => {
+      const a = imgEl.naturalWidth && imgEl.naturalHeight
+        ? imgEl.naturalWidth / imgEl.naturalHeight
+        : null;
+      applyCrop(imgEl, a ? fitBoxToAspect(exact, targetAspect, a) : exact);
+    };
+    if (imgEl.complete && imgEl.naturalWidth) fit();
+    else imgEl.addEventListener('load', fit, { once: true });
+    return;
+  }
 
   const key = `${url}|${targetAspect.toFixed(3)}`;
   const c = cache();
