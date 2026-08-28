@@ -5,7 +5,10 @@ import {
   initialFetch, refreshBillboards, applyFilters, setCallbacks
 } from './data.js';
 import { leafMap, renderMarkers, setSelectHandler as setMapSelect } from './map.js';
-import { renderGallery, renderDetailPanel, setSelectHandler as setGallerySelect } from './gallery.js';
+import {
+  renderGallery, renderDetailPopup, closeDetailPopup, dismissDetailPopup,
+  setOnPopupDismiss, setSelectHandler as setGallerySelect
+} from './gallery.js';
 import { renderMobileSheet, initSheetDrag, setSelectHandler as setMobileSelect } from './mobile.js';
 import { updateStats, openStats, closeStats } from './stats.js';
 import {
@@ -54,23 +57,17 @@ function selectBillboard(id) {
   } else {
     renderGallery();
     renderMarkers();
-    if (b?.latitude && b?.longitude) {
-      const zoom = 15;
-      const mapH = leafMap.getSize().y;
-      const panelH = mapH * 0.65;
-      const visibleH = mapH - panelH;
-      const offsetPx = (panelH / 2) + (visibleH * 0.1);
-      leafMap.setView([b.latitude, b.longitude], zoom, { animate: false });
-      const pt = leafMap.latLngToContainerPoint(L.latLng(b.latitude, b.longitude));
-      const shifted = L.point(pt.x, pt.y + offsetPx);
-      const newCenter = leafMap.containerPointToLatLng(shifted);
-      leafMap.setView(newCenter, zoom, { animate: true });
+    // The bubble hangs off the marker, so there is no panel to dodge: keep the
+    // user's zoom (context is the point) and only close in if they are far out.
+    // Leaflet's autoPan then nudges the map just enough to fit the bubble.
+    if (b?.latitude && b?.longitude && leafMap.getZoom() < 13) {
+      leafMap.setView([b.latitude, b.longitude], 13, { animate: false });
     }
     requestAnimationFrame(() => {
       const card = document.querySelector(`#galleryList [data-id="${selectedId}"]`);
       if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
-    renderDetailPanel();
+    renderDetailPopup();
   }
 }
 
@@ -79,16 +76,16 @@ setMapSelect(selectBillboard);
 setGallerySelect(selectBillboard);
 setMobileSelect(selectBillboard);
 
-// Detail close button
-document.getElementById('detailClose').onclick = () => {
-  document.getElementById('detailPanel').classList.remove('open');
+// Dismissing the bubble (close button, map click, Escape) clears the selection
+setOnPopupDismiss(() => {
   setSelectedId(null);
   renderGallery();
   renderMarkers();
-};
+});
 
 // Filter change callback
 setOnFilterChange((opts = {}) => {
+  closeDetailPopup();
   if (!opts.skipPills) buildPills();
   applyFilters();
   renderGallery();
@@ -139,10 +136,21 @@ initHamburger();
 initSheetDrag();
 initStatsFab();
 
-// Keyboard: close stats on Escape too
+// Escape peels one layer at a time: any open overlay first, and only the map
+// bubble once nothing is stacked on top of it. Capture phase so this runs
+// before ui.js's handler clears the overlay classes we test here.
+//
+// Leaflet closes its own popup on Escape, but only while the map holds focus -
+// after clicking a gallery card it does not, so the bubble needs this.
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeStats();
-});
+  if (e.key !== 'Escape') return;
+  const overlayOpen =
+    document.getElementById('lightbox')?.classList.contains('open') ||
+    document.getElementById('aboutPanel')?.classList.contains('open') ||
+    document.getElementById('statsPanel')?.classList.contains('open');
+  closeStats();
+  if (!overlayOpen) dismissDetailPopup();
+}, true);
 
 // ── REFRESH (manual only) ────────────────────────────────
 // Content loads on page open and on an explicit refresh. There is no
@@ -181,4 +189,9 @@ window.doRefresh = doRefresh;
 initialFetch();
 
 // Resize
-window.addEventListener('resize', () => leafMap.invalidateSize());
+window.addEventListener('resize', () => {
+  leafMap.invalidateSize();
+  // Below the breakpoint the bottom sheet takes over; a stray bubble would
+  // sit on top of it.
+  if (isMobile()) closeDetailPopup();
+});

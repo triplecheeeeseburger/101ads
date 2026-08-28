@@ -72,7 +72,6 @@ export function buildPills() {
 function triggerFilter(cat) {
   setActiveFilter(cat);
   setSelectedId(null);
-  document.getElementById('detailPanel').classList.remove('open');
   if (onFilterChange) onFilterChange();
 }
 
@@ -248,13 +247,11 @@ export function initStatsFab() {
       setStyle(fab, 'bottom', (sheetH + chipH + 12) + 'px');
     } else {
       // Desktop: chips stay parked at the bottom-left of the map. The detail
-      // card reserves matching space at its foot (--chip-inset) so the chips
-      // never sit on top of its content.
+      // bubble is anchored to its marker and autoPans clear of them, so there
+      // is no longer a panel foot to reserve space for.
       setStyle(chipBar, 'bottom', '12px');
       setStyle(fab, 'bottom', '');
     }
-    const inset = (!isMobile.matches && chipsVisible) ? chipBar.offsetHeight + 24 : 0;
-    document.documentElement.style.setProperty('--chip-inset', inset + 'px');
   }
 
   const ro = new ResizeObserver(updatePositions);
