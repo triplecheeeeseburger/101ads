@@ -20,9 +20,10 @@ import {
 } from './ui.js';
 
 // ── SELECT LOGIC ─────────────────────────────────────────
-function selectBillboard(id) {
+// opts.open: select even if already selected (deep link), instead of toggling off.
+function selectBillboard(id, opts = {}) {
   const prev = selectedId;
-  setSelectedId(prev === id ? null : id);
+  setSelectedId(opts.open || prev !== id ? id : null);
   const b = allBillboards.find(x => x.id === selectedId);
   syncUrlToSelection(b);
 
@@ -68,19 +69,22 @@ function selectBillboard(id) {
       leafMap.setView(newCenter, zoom, { animate: true });
     };
 
+    // Scroll the card into view only once the sheet has its final height -
+    // measured mid-animation, 'nearest' lands it below the fold.
+    const scrollCard = () => {
+      if (!selectedId) return;
+      const card = document.querySelector(`#sheetList [data-id="${selectedId}"]`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
     if (sheetResizing) {
       let panned = false;
-      const go = () => { if (panned) return; panned = true; leafMap.invalidateSize(); panToBillboard(); };
+      const go = () => { if (panned) return; panned = true; leafMap.invalidateSize(); panToBillboard(); scrollCard(); };
       sheet.addEventListener('transitionend', e => { if (e.propertyName === 'height') go(); }, { once: true });
       setTimeout(go, 420);   // transition is 350ms; fallback if it never fires
     } else {
       panToBillboard();
-    }
-    if (selectedId) {
-      requestAnimationFrame(() => {
-        const card = document.querySelector(`#sheetList [data-id="${selectedId}"]`);
-        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      });
+      requestAnimationFrame(scrollCard);
     }
   } else {
     renderGallery();
@@ -134,6 +138,12 @@ window.submitContact = submitContact;
 
 // ── DATA CALLBACKS ───────────────────────────────────────
 function onDataReady() {
+  // Resolve a deep link BEFORE the first render. With a selection already set,
+  // renderMarkers skips its animated fit-to-all-billboards zoom - which would
+  // otherwise finish after we jump to the billboard and yank the map back out.
+  const linked = resolveLinkedBillboard();
+  if (linked) setSelectedId(linked.id);
+
   buildPills();
   buildTimeChips();
   applyFilters();
@@ -142,24 +152,27 @@ function onDataReady() {
   renderMarkers();
   updateStats();
   updateBadge();
-  openLinkedBillboard();
+
+  if (linked) {
+    if (!isMobile()) {
+      // Arriving cold, the reader has no context yet - start closer than the
+      // click-to-select path does, which deliberately keeps the user's zoom.
+      leafMap.setView([linked.latitude, linked.longitude], 15, { animate: false });
+    }
+    selectBillboard(linked.id, { open: true });
+  }
 }
 
 // ── DEEP LINK ────────────────────────────────────────────
-// /?b=<id> opens with that billboard selected (see share.js). Runs once, after
-// the first fetch. An unknown or stale id is dropped from the URL quietly
-// rather than leaving a link that looks like it should have done something.
-function openLinkedBillboard() {
+// /?b=<id> opens with that billboard selected (see share.js). An unknown or
+// stale id is dropped from the URL quietly rather than leaving a link that
+// looks like it should have done something.
+function resolveLinkedBillboard() {
   const raw = linkedIdFromUrl();
-  if (!raw) return;
+  if (!raw) return null;
   const b = findByShortId(allBillboards, raw);
-  if (!b) { syncUrlToSelection(null); return; }
-  if (!isMobile() && b.latitude && b.longitude) {
-    // Arriving cold, the reader has no context yet - start closer than the
-    // click-to-select path does, which deliberately keeps the user's zoom.
-    leafMap.setView([b.latitude, b.longitude], 15, { animate: false });
-  }
-  selectBillboard(b.id);
+  if (!b || !b.latitude || !b.longitude) { syncUrlToSelection(null); return null; }
+  return b;
 }
 
 function onSyncUpdate() {
