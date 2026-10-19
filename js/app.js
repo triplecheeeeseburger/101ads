@@ -11,6 +11,7 @@ import {
 } from './gallery.js';
 import { renderMobileSheet, initSheetDrag, setSelectHandler as setMobileSelect } from './mobile.js';
 import { updateStats, openStats, closeStats } from './stats.js';
+import { linkedIdFromUrl, findByShortId, syncUrlToSelection } from './share.js';
 import {
   buildPills, buildTimeChips, initSearch, initLightbox, initKeyboard,
   initHamburger, initStatsFab, updateBadge, openLightbox,
@@ -23,6 +24,7 @@ function selectBillboard(id) {
   const prev = selectedId;
   setSelectedId(prev === id ? null : id);
   const b = allBillboards.find(x => x.id === selectedId);
+  syncUrlToSelection(b);
 
   if (isMobile()) {
     // Toggle in-place without full re-render
@@ -105,6 +107,7 @@ setMobileSelect(selectBillboard);
 // Dismissing the bubble (close button, map click, Escape) clears the selection
 setOnPopupDismiss(() => {
   setSelectedId(null);
+  syncUrlToSelection(null);
   renderGallery();
   renderMarkers();
 });
@@ -139,6 +142,24 @@ function onDataReady() {
   renderMarkers();
   updateStats();
   updateBadge();
+  openLinkedBillboard();
+}
+
+// ── DEEP LINK ────────────────────────────────────────────
+// /?b=<id> opens with that billboard selected (see share.js). Runs once, after
+// the first fetch. An unknown or stale id is dropped from the URL quietly
+// rather than leaving a link that looks like it should have done something.
+function openLinkedBillboard() {
+  const raw = linkedIdFromUrl();
+  if (!raw) return;
+  const b = findByShortId(allBillboards, raw);
+  if (!b) { syncUrlToSelection(null); return; }
+  if (!isMobile() && b.latitude && b.longitude) {
+    // Arriving cold, the reader has no context yet - start closer than the
+    // click-to-select path does, which deliberately keeps the user's zoom.
+    leafMap.setView([b.latitude, b.longitude], 15, { animate: false });
+  }
+  selectBillboard(b.id);
 }
 
 function onSyncUpdate() {

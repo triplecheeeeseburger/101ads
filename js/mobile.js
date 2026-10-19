@@ -1,5 +1,6 @@
 // ── MOBILE - bottom sheet, cards, drag ───────────────────
 import { logoUrl, catStyle, formatDate } from './config.js';
+import { shareBillboard, SHARE_ICON } from './share.js';
 import { filtered, selectedId } from './data.js';
 import { openLightbox } from './ui.js';
 import { observeFrame } from './crop.js';
@@ -91,11 +92,23 @@ export function renderMobileSheet() {
     metaDiv.innerHTML = `📍 ${b.address || 'Unknown location'}<br>${(b.latitude || 0).toFixed(6)}, ${(b.longitude || 0).toFixed(6)}<br>🕐 ${formatDate(b.captured_at, true)}`;
     expanded.appendChild(metaDiv);
 
+    // Share and Close side by side. Close keeps its original look.
+    const actions = document.createElement('div');
+    actions.className = 'mobile-expanded-actions';
+
+    const shareBtn = document.createElement('button');
+    shareBtn.type = 'button';
+    shareBtn.className = 'mobile-share-btn share-btn';
+    shareBtn.innerHTML = `${SHARE_ICON}<span>Share</span>`;
+    shareBtn.addEventListener('click', e => { e.stopPropagation(); shareBillboard(b, shareBtn); });
+    actions.appendChild(shareBtn);
+
     const closeBtn = document.createElement('button');
     closeBtn.textContent = 'Close ↑';
-    closeBtn.style.cssText = 'margin-top:10px;width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--text2);cursor:pointer;font-weight:500;';
+    closeBtn.style.cssText = 'flex:1;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--text2);cursor:pointer;font-weight:500;';
     closeBtn.addEventListener('click', e => { e.stopPropagation(); if (selectHandler) selectHandler(b.id); });
-    expanded.appendChild(closeBtn);
+    actions.appendChild(closeBtn);
+    expanded.appendChild(actions);
 
     card.appendChild(header);
     card.appendChild(expanded);

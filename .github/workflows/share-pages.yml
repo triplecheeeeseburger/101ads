@@ -1,0 +1,53 @@
+# Rebuilds b/<id>/ share pages and og/<id>.jpg preview images from Supabase.
+# See tools/build-share-pages.mjs for why these exist.
+#
+# Runs daily, and on demand from the Actions tab ("Run workflow") - use that
+# right after publishing a batch so new billboards can be shared immediately.
+# Commits only b/ and og/, and only when something changed.
+
+name: Share pages
+
+on:
+  schedule:
+    - cron: '17 14 * * *'   # 07:17 PT
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Rebuild every preview image (after crop_box changes)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: share-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install sharp
+        run: npm install --no-save --no-package-lock sharp@0.33
+
+      - name: Build share pages
+        run: node tools/build-share-pages.mjs ${{ inputs.force && '--force' || '' }}
+
+      - name: Commit changes
+        run: |
+          git config user.name  "101ads-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A -- b og
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "Update share pages"
+            git push
+          fi

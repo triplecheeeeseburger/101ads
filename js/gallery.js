@@ -4,6 +4,7 @@ import { filtered, selectedId, allBillboards } from './data.js';
 import { openLightbox } from './ui.js';
 import { observeFrame } from './crop.js';
 import { leafMap } from './map.js';
+import { shareBillboard, closeShareMenu, SHARE_ICON } from './share.js';
 
 // Must match .card-img in style.css (96 × 64)
 const CARD_ASPECT = 96 / 64;
@@ -85,6 +86,7 @@ export function setOnPopupDismiss(fn) { onPopupDismiss = fn; }
 // button, a click on the map, or Escape.
 leafMap.on('popupclose', e => {
   if (e.popup !== detailPopup) return;
+  closeShareMenu();
   detailPopup = null;
   if (!suppressDismiss && onPopupDismiss) onPopupDismiss();
 });
@@ -97,6 +99,7 @@ export function dismissDetailPopup() {
 }
 
 export function closeDetailPopup() {
+  closeShareMenu();
   if (!detailPopup) return;
   suppressDismiss = true;
   leafMap.closePopup(detailPopup);
@@ -124,6 +127,7 @@ export function renderDetailPopup() {
   el.innerHTML = `
     <div class="bb-img-wrap">
       ${b.image_url ? `<img class="bb-img" src="${b.image_url}" alt=""><div class="bb-img-zoom-hint">⤢</div>` : ''}
+      <button class="bb-share share-btn" type="button" aria-label="Share this billboard" title="Share">${SHARE_ICON}</button>
       <button class="bb-close" type="button" aria-label="Close">✕</button>
       <span class="bb-cat" style="background:${color};">${b.category || 'Uncategorized'}</span>
     </div>
@@ -150,6 +154,11 @@ export function renderDetailPopup() {
     .setContent(el)
     .openOn(leafMap);
 
+  el.querySelector('.bb-share').addEventListener('click', e => {
+    e.stopPropagation();
+    shareBillboard(b, e.currentTarget);
+  });
+
   el.querySelector('.bb-close').addEventListener('click', () => {
     leafMap.closePopup(detailPopup);   // popupclose then clears the selection
   });
@@ -157,7 +166,7 @@ export function renderDetailPopup() {
   if (b.image_url) {
     const wrap = el.querySelector('.bb-img-wrap');
     wrap.addEventListener('click', e => {
-      if (e.target.closest('.bb-close')) return;
+      if (e.target.closest('.bb-close, .bb-share')) return;
       openLightbox(b.image_url);
     });
     // Same content-aware framing the cards use - a raw driving photo centred in
