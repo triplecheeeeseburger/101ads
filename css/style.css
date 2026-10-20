@@ -1103,6 +1103,30 @@
   .share-item:hover, .share-item:focus-visible { background: var(--surface2); outline: none; }
 
   .mobile-expanded-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  /* Mobile share - on the expanded photo, same chip as the desktop bubble.
+     36px: a comfortable thumb target without covering much of the board. */
+  .mobile-share-chip {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 2;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-share-chip svg { width: 17px; height: 17px; margin-top: -1px; }
+  .mobile-share-chip:active { background: rgba(0,0,0,0.7); }
   .mobile-share-btn {
     flex: 1;
     display: flex;

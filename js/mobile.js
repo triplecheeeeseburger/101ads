@@ -79,6 +79,19 @@ export function renderMobileSheet() {
       img.src = b.image_url; img.alt = '';
       wrap.appendChild(img);
       observeFrame(img, b.image_url, EXPANDED_ASPECT, b.crop_box);
+
+      // Share sits on the photo, not at the foot of the card: the photo is at
+      // the top of the expanded block, so it stays on screen. The foot of the
+      // card falls below the sheet on wider phones (the photo grows with
+      // width), which hid a bottom-row Share button on Pro / Pro Max iPhones.
+      const shareChip = document.createElement('button');
+      shareChip.type = 'button';
+      shareChip.className = 'mobile-share-chip share-btn';
+      shareChip.setAttribute('aria-label', 'Share this billboard');
+      shareChip.innerHTML = SHARE_ICON;
+      shareChip.addEventListener('click', e => { e.stopPropagation(); shareBillboard(b, shareChip); });
+      wrap.appendChild(shareChip);
+
       wrap.addEventListener('click', e => { e.stopPropagation(); openLightbox(b.image_url); });
       expanded.appendChild(wrap);
     }
@@ -92,20 +105,22 @@ export function renderMobileSheet() {
     metaDiv.innerHTML = `📍 ${b.address || 'Unknown location'}<br>${(b.latitude || 0).toFixed(6)}, ${(b.longitude || 0).toFixed(6)}<br>🕐 ${formatDate(b.captured_at, true)}`;
     expanded.appendChild(metaDiv);
 
-    // Share and Close side by side. Close keeps its original look.
     const actions = document.createElement('div');
     actions.className = 'mobile-expanded-actions';
 
-    const shareBtn = document.createElement('button');
-    shareBtn.type = 'button';
-    shareBtn.className = 'mobile-share-btn share-btn';
-    shareBtn.innerHTML = `${SHARE_ICON}<span>Share</span>`;
-    shareBtn.addEventListener('click', e => { e.stopPropagation(); shareBillboard(b, shareBtn); });
-    actions.appendChild(shareBtn);
+    // Only reached for a row without a photo - there is no chip to carry Share.
+    if (!b.image_url) {
+      const shareBtn = document.createElement('button');
+      shareBtn.type = 'button';
+      shareBtn.className = 'mobile-share-btn share-btn';
+      shareBtn.innerHTML = `${SHARE_ICON}<span>Share</span>`;
+      shareBtn.addEventListener('click', e => { e.stopPropagation(); shareBillboard(b, shareBtn); });
+      actions.appendChild(shareBtn);
+    }
 
     const closeBtn = document.createElement('button');
     closeBtn.textContent = 'Close ↑';
-    closeBtn.style.cssText = 'flex:1;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--text2);cursor:pointer;font-weight:500;';
+    closeBtn.style.cssText = 'flex:1;width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--text2);cursor:pointer;font-weight:500;';
     closeBtn.addEventListener('click', e => { e.stopPropagation(); if (selectHandler) selectHandler(b.id); });
     actions.appendChild(closeBtn);
     expanded.appendChild(actions);
